@@ -2,9 +2,13 @@
 
 Implementation of reliable transfer protocol over UDP.
 
-Aim: simulate TCP socket connection using UDP through establishing a custom reliable channel. Packet loss is artificially simulated since this occurence is rare over localhost. 
+Aim: simulate TCP socket connection using UDP through establishing a custom reliable channel. Packet loss is artificially simulated since this occurence is rare over localhost.
 
-This project is part of COMP3331 Assginment 1.
+MWS = Maximum Window Size
+
+MSS = Maximum Segment Size
+
+pdrop = Packet Loss Probability 
 
 Reciever:
 
