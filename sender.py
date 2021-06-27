@@ -16,8 +16,14 @@ import sys
 # Constants
 ##################################################################
 
-error = 'USAGE: python sender.py receiver_host_ip receiver_port \
-    FileToSend.txt MWS MSS timeout pdrop seed'
+error = (
+    'USAGE: python sender.py receiver_host_ip receiver_port '
+    + 'FileToSend.txt MWS MSS timeout pdrop seed'
+)
+
+##################################################################
+# PTP
+##################################################################
 
 if (len(sys.argv) != 9): exit(error)
 try:

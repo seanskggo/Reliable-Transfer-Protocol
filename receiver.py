@@ -18,6 +18,10 @@ import sys
 
 error = 'USAGE: python receiver.py receiver_port FileReceiverd.txt'
 
+##################################################################
+# PTP
+##################################################################
+
 if (len(sys.argv) != 3): exit(error)
 try:
     port, filename = int(sys.argv[1]), sys.argv[2]
