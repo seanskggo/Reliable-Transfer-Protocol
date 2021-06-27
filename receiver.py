@@ -31,8 +31,10 @@ except: exit(error)
 # Create UDP socket server
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
-while True:
-    msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
-    print(msg, addr)
+# Open and write to file until teardown
+with open(filename, "wb") as file:
+    while True:
+        msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
+        file.write(msg)
 
 # python3 receiver.py 8000 temp.txt 
