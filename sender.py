@@ -20,6 +20,7 @@ error = (
     'USAGE: python sender.py receiver_host_ip receiver_port '
     + 'FileToSend.txt MWS MSS timeout pdrop seed'
 )
+pdrop_error = 'pdrop parameter must be between 0 and 1'
 
 ##################################################################
 # PTP
@@ -27,6 +28,20 @@ error = (
 
 if (len(sys.argv) != 9): exit(error)
 try:
-    ip, port, filename = int(sys.argv[1]), sys.argv[2]
+    ip, port, filename, MWS, MSS, timeout, pdrop, seed = (
+        sys.argv[1], int(sys.argv[2]), 
+        sys.argv[3], int(sys.argv[4]), 
+        int(sys.argv[5]), int(sys.argv[6]), 
+        float(sys.argv[7]), sys.argv[8], 
+    )
 except:
     exit(error)
+if not 0 < pdrop < 1: exit(pdrop_error)
+
+
+
+
+
+
+
+# python3 sender.py localhost 8000 FileToSend.txt 256 16 600 0.1 seed1
