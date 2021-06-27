@@ -20,7 +20,8 @@ error = (
     'USAGE: python sender.py receiver_host_ip receiver_port '
     + 'FileToSend.txt MWS MSS timeout pdrop seed'
 )
-pdrop_error = 'pdrop parameter must be between 0 and 1'
+pdrop_error = 'Pdrop parameter must be between 0 and 1'
+MSS_error = 'Maximum Segment Size must be greater than 0'
 
 ##################################################################
 # PTP
@@ -36,7 +37,16 @@ try:
     )
 except:
     exit(error)
+# Basic error handling
 if not 0 < pdrop < 1: exit(pdrop_error)
+if MSS <= 0: exit(MSS_error)
+# Open file for reading. If the file does not exist, throw error
+with open(filename, "rb") as file:
+    packet = file.read(MSS)
+    while packet:
+        print(packet)
+        packet = file.read(MSS)
+    
 
 
 
