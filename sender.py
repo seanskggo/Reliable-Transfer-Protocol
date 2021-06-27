@@ -25,6 +25,20 @@ pdrop_error = 'Pdrop parameter must be between 0 and 1'
 MSS_error = 'Maximum Segment Size must be greater than 0'
 
 ##################################################################
+# Functions
+##################################################################
+
+def create_ptp_segment(type, length, seq, ack, data):
+    return (
+        f"Type: {type}\r\n"
+        + f"Content-Length: {length}"
+        + f"Sequence-Number: {seq}"
+        + f"Acknowledgement-Number: {ack}"
+        + f"\r\n"
+        + f"Content: {data}\r\n"
+    )
+
+##################################################################
 # PTP
 ##################################################################
 
@@ -49,11 +63,6 @@ with open(filename, "rb") as file:
         client.sendto(packet, (ip, port))
         packet = file.read(MSS)
     
-
-
-
-
-
 
 
 # python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1
