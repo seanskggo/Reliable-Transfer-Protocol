@@ -11,6 +11,7 @@
 ##################################################################
 
 import sys
+import socket
 
 ##################################################################
 # Constants
@@ -35,16 +36,17 @@ try:
         int(sys.argv[5]), int(sys.argv[6]), 
         float(sys.argv[7]), sys.argv[8], 
     )
-except:
-    exit(error)
+except: exit(error)
 # Basic error handling
 if not 0 < pdrop < 1: exit(pdrop_error)
 if MSS <= 0: exit(MSS_error)
+# Create UDP socket client
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "rb") as file:
     packet = file.read(MSS)
     while packet:
-        print(packet)
+        client.sendto(packet, (ip, port))
         packet = file.read(MSS)
     
 
@@ -54,4 +56,4 @@ with open(filename, "rb") as file:
 
 
 
-# python3 sender.py localhost 8000 FileToSend.txt 256 16 600 0.1 seed1
+# python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1
