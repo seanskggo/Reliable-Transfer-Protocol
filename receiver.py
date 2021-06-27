@@ -34,3 +34,5 @@ server.bind((ip, port))
 while True:
     msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
     print(msg, addr)
+
+# python3 receiver.py 8000 temp.txt 
