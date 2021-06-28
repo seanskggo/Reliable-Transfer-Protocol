@@ -23,6 +23,7 @@ error = (
 )
 pdrop_error = 'Pdrop parameter must be between 0 and 1'
 MSS_error = 'Maximum Segment Size must be greater than 0'
+log = list()
 
 ##################################################################
 # Functions
@@ -37,6 +38,8 @@ def create_ptp_segment(flag, length, seq, ack, data):
         + f"\r\n"
         + f"TCP payload: {data}\r\n"
     ).encode()
+
+
 
 ##################################################################
 # PTP

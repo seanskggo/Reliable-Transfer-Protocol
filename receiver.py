@@ -12,6 +12,7 @@
 
 import sys
 import socket
+import time
 
 ##################################################################
 # Constants
@@ -19,6 +20,8 @@ import socket
 
 error = 'USAGE: python receiver.py receiver_port FileReceiverd.txt'
 ip = '127.0.0.1'
+log = list()
+epoch = time.time()
 
 ##################################################################
 # Functions
@@ -34,6 +37,10 @@ def create_ptp_segment(flag, length, seq, ack, data):
         + f"TCP payload: {data}\r\n"            # Payload
     ).encode()
 
+def send(server, addr, ttype, payload):
+    log.append([ttype, time.time() - epoch, ])
+    server.sendto(create_ptp_segment(*payload), addr)
+
 ##################################################################
 # PTP
 ##################################################################
@@ -47,7 +54,7 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
 # Opening handshake
 msg, addr = server.recvfrom(2048)
-server.sendto(create_ptp_segment("SYNACK", MSS, 0, 0, ""), addr)
+send(server, addr, "snd", ["SYNACK", MSS, 0, 0, ""])
 msg, addr = server.recvfrom(2048)
 print(msg.decode())
 
