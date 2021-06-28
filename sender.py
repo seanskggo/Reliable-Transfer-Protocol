@@ -28,15 +28,15 @@ MSS_error = 'Maximum Segment Size must be greater than 0'
 # Functions
 ##################################################################
 
-def create_ptp_segment(type, length, seq, ack, data):
+def create_ptp_segment(flag, length, seq, ack, data):
     return (
-        f"Type: {type}\r\n"
-        + f"Content-Length: {length}"
-        + f"Sequence-Number: {seq}"
-        + f"Acknowledgement-Number: {ack}"
+        f"Flags: {flag}\r\n"
+        + f"Segment length: {length}\r\n"
+        + f"Sequence number: {seq}\r\n"
+        + f"Acknowledgement number: {ack}\r\n"
         + f"\r\n"
-        + f"Content: {data}\r\n"
-    )
+        + f"TCP payload: {data}\r\n"
+    ).encode()
 
 ##################################################################
 # PTP
@@ -56,13 +56,18 @@ if not 0 < pdrop < 1: exit(pdrop_error)
 if MSS <= 0: exit(MSS_error)
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# Open file for reading. If the file does not exist, throw error
-with open(filename, "rb") as file:
-    packet = file.read(MSS)
-    while packet:
-        client.sendto(packet, (ip, port))
-        packet = file.read(MSS)
+# Opening handshake
+client.sendto(create_ptp_segment("SYN", MSS, 0, 0, ""), (ip, port))
+msg, addr = client.recvfrom(2048)
+client.sendto(create_ptp_segment("ACK", MSS, 0, 0, ""), (ip, port))
+
+# # Open file for reading. If the file does not exist, throw error
+# with open(filename, "rb") as file:
+#     packet = file.read(MSS)
+#     while packet:
+#         client.sendto(packet, (ip, port))
+#         packet = file.read(MSS)
     
 
 
-# python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1
+# # python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1
