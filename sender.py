@@ -49,15 +49,19 @@ try:
         float(sys.argv[7]), sys.argv[8], 
     )
 except: exit(error)
+
 # Basic error handling
 if not 0 < pdrop < 1: exit(pdrop_error)
 if MSS <= 0: exit(MSS_error)
+
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 # Opening handshake
 client.sendto(create_ptp_segment("SYN", 0, MSS, 0, ""), (ip, port))
 msg, addr = client.recvfrom(2048)
 client.sendto(create_ptp_segment("ACK", 0, MSS, 0, ""), (ip, port))
+
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "rb") as file:
     packet = file.read(MSS)
