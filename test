@@ -1,5 +1,27 @@
-#!/bin/sh
-python3 receiver.py 8000 FileReceived.txt & P1=$!
-python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1 & P2=$!
-trap "kill $P1 $P2" INT TERM
-wait $P1 $P2
+#!/bin/bash
+
+# python3 receiver.py 8000 FileReceived.txt & P1=$!
+# python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1 & P2=$!
+
+# echo "Receiver Process: $P1"
+# echo "Sender Process: $P2"
+
+# trap "
+
+#     kill $P1 $P2
+
+# " SIGINT
+
+# wait $P1 $P2
+
+# if [ (pgrep --ns $P1 | grep $P1) -ne "" ]
+# then 
+#     echo "hi"
+
+# if [ pgrep --ns $P2 | grep $P2 -ne "" ]
+# then 
+#     echo "hi"
+
+if [ pgrep --ns 1223 | grep 1223 ]
+then 
+    echo "hi"
