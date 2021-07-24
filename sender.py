@@ -40,6 +40,7 @@ def create_ptp_segment(flag, seq, MSS, ack, data):
 # PTP
 ##################################################################
 
+# Parse commandline arguments
 if (len(sys.argv) != 9): exit(error)
 try:
     ip, port, filename, MWS, MSS, timeout, pdrop, seed = (
@@ -61,13 +62,13 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.sendto(create_ptp_segment("SYN", 0, MSS, 0, ""), (ip, port))
 msg, addr = client.recvfrom(2048)
 client.sendto(create_ptp_segment("ACK", 0, MSS, 0, ""), (ip, port))
-
+print("done!")
 # Open file for reading. If the file does not exist, throw error
-with open(filename, "rb") as file:
-    packet = file.read(MSS)
-    while packet:
-        client.sendto(packet, (ip, port))
-        packet = file.read(MSS)
+# with open(filename, "rb") as file:
+#     packet = file.read(MSS)
+#     while packet:
+#         client.sendto(packet, (ip, port))
+#         packet = file.read(MSS)
 
 ##################################################################
 # Test Command

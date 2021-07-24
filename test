@@ -1,0 +1,4 @@
+#!/bin/sh
+python3 receiver.py 8000 FileReceived.txt & P1=$!
+python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1 & P2=$!
+wait $P1 $P2

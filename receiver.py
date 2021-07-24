@@ -55,15 +55,14 @@ server.bind((ip, port))
 # Opening handshake
 msg, addr = server.recvfrom(2048)
 _, _, MSS, _, _ = struct.unpack("!6sIII0s", msg)
-print(MSS)
 send(server, addr, "snd", ["SYNACK", 0, 0, 0, ""])
 msg, addr = server.recvfrom(2048)
-
+print("done")
 # Open and write to file until teardown
-with open(filename, "wb") as file:
-    while True:
-        msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
-        file.write(msg)
+# with open(filename, "wb") as file:
+#     while True:
+#         msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
+#         file.write(msg)
 
 ##################################################################
 # Test Command
