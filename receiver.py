@@ -13,6 +13,7 @@
 import sys
 import socket
 import time
+import struct
 
 ##################################################################
 # Constants
@@ -27,18 +28,15 @@ epoch = time.time()
 # Functions
 ##################################################################
 
-def create_ptp_segment(flag, length, seq, ack, data):
-    return (
-        f"Flags: {flag}\r\n"                    # SYN/SYNACK/ACK/DATA/FIN
-        + f"MSS: {length}\r\n"                  # Maximum segment size
-        + f"Sequence number: {seq}\r\n"         # Sequence number
-        + f"Acknowledgement number: {ack}\r\n"  # Acknowledgement number
-        + f"\r\n"   
-        + f"TCP payload: {data}\r\n"            # Payload
-    ).encode()
+def create_ptp_segment(flag, seq, MSS, ack, data):
+    length = len(data.encode())
+    return struct.pack(f"!6sIII{length}s", 
+        flag.encode(), seq, MSS, ack, data.encode()
+    )
 
-def send(server, addr, ttype, payload):
-    log.append([ttype, time.time() - epoch, ])
+def send(server, addr, ptype, payload):
+    ttime = round(time.time() - epoch, 3)
+    log.append([ptype, ttime, *payload[1:-1]])
     server.sendto(create_ptp_segment(*payload), addr)
 
 ##################################################################
@@ -47,21 +45,33 @@ def send(server, addr, ttype, payload):
 
 # Parse commandline arguments
 if (len(sys.argv) != 3): exit(error)
-try: port, filename, MSS = int(sys.argv[1]), sys.argv[2], None
+try: port, filename, MSS = int(sys.argv[1]), sys.argv[2], 0
 except: exit(error)
 # Create UDP socket server
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
 # Opening handshake
 msg, addr = server.recvfrom(2048)
-send(server, addr, "snd", ["SYNACK", MSS, 0, 0, ""])
+_, _, MSS, _, _ = struct.unpack("!6sIII0s", msg)
+print(MSS)
+send(server, addr, "snd", ["SYNACK", 0, 0, 0, ""])
 msg, addr = server.recvfrom(2048)
-print(msg.decode())
+# Open and write to file until teardown
+with open(filename, "wb") as file:
+    while True:
+        msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
+        file.write(msg)
+        if not msg:
+            socket.close()
 
-# # Open and write to file until teardown
-# with open(filename, "wb") as file:
-#     while True:
-#         msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
-#         file.write(msg)
+##################################################################
+# Test Command
+##################################################################
 
-# # python3 receiver.py 8000 temp.txt 
+# Linux
+
+# python3 receiver.py 8000 FileReceived.txt
+
+# Powershell
+
+# python receiver.py 8000 FileReceived.txt
