@@ -13,6 +13,8 @@
 import sys
 import socket
 import struct
+import time
+import enum
 
 ##################################################################
 # Constants
@@ -25,16 +27,37 @@ error = (
 pdrop_error = 'Pdrop parameter must be between 0 and 1'
 MSS_error = 'Maximum Segment Size must be greater than 0'
 log = list()
+epoch = time.time()
+header_size = 14
+
+class Packet (enum.Enum):
+    SYN = "S"
+    ACK = "A"
+    DATA = "D"
+    SYNACK = "SA"
+    FIN = "F"
+    FINACK = "FA"
+
+class Action (enum.Enum):
+    SEND = "snd"
+    RECEIVE = "rcv"
+    DROP = "drop"
 
 ##################################################################
 # Functions
 ##################################################################
 
+# Create TCP segment using struct (header is 18 bytes)
 def create_ptp_segment(flag, seq, MSS, ack, data):
-    length = len(data.encode())
-    return struct.pack(f"!6sIII{length}s", 
+    return struct.pack(f"!2sIII{MSS}s", 
         flag.encode(), seq, MSS, ack, data.encode()
     )
+
+# Send TCP packet and log the send in a log file
+def send(client, addr, ptype, payload):
+    ttime = round(time.time() - epoch, 3)
+    log.append([ptype, ttime, *payload[1:-1]])
+    client.sendto(create_ptp_segment(*payload), addr)
 
 ##################################################################
 # PTP
@@ -58,10 +81,11 @@ if MSS <= 0: exit(MSS_error)
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Opening handshake
-client.sendto(create_ptp_segment("SYN", 0, MSS, 0, ""), (ip, port))
-msg, addr = client.recvfrom(2048)
-client.sendto(create_ptp_segment("ACK", 0, MSS, 0, ""), (ip, port))
+# Opening handshake -> no connection or teardown packets will be
+# dropped
+send(client, (ip, port), Action.SEND.value, [Packet.SYN.value, 0, MSS, 0, ""])
+msg, addr = client.recvfrom(MSS + header_size)
+send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, ""])
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "rb") as file:

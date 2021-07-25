@@ -14,26 +14,42 @@ import sys
 import socket
 import time
 import struct
+import enum
 
 ##################################################################
-# Constants
+# Constants and Classes
 ##################################################################
 
 error = 'USAGE: python receiver.py receiver_port FileReceiverd.txt'
 ip = '127.0.0.1'
 log = list()
 epoch = time.time()
+header_size = 14
+
+class Packet (enum.Enum):
+    SYN = "S"
+    ACK = "A"
+    DATA = "D"
+    SYNACK = "SA"
+    FIN = "F"
+    FINACK = "FA"
+
+class Action (enum.Enum):
+    SEND = "snd"
+    RECEIVE = "rcv"
+    DROP = "drop"
 
 ##################################################################
 # Functions
 ##################################################################
 
+# Create TCP segment using struct (header is 18 bytes)
 def create_ptp_segment(flag, seq, MSS, ack, data):
-    length = len(data.encode())
-    return struct.pack(f"!6sIII{length}s", 
+    return struct.pack(f"!2sIII{MSS}s", 
         flag.encode(), seq, MSS, ack, data.encode()
     )
 
+# Send TCP packet and log the send in a log file
 def send(server, addr, ptype, payload):
     ttime = round(time.time() - epoch, 3)
     log.append([ptype, ttime, *payload[1:-1]])
@@ -45,23 +61,24 @@ def send(server, addr, ptype, payload):
 
 # Parse commandline arguments
 if (len(sys.argv) != 3): exit(error)
-try: port, filename, MSS = int(sys.argv[1]), sys.argv[2], 0
+try: port, filename = int(sys.argv[1]), sys.argv[2]
 except: exit(error)
 
 # Create UDP socket server
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
 
-# Opening handshake
-msg, addr = server.recvfrom(2048)
-_, _, MSS, _, _ = struct.unpack("!6sIII0s", msg)
-send(server, addr, "snd", ["SYNACK", 0, 0, 0, ""])
-msg, addr = server.recvfrom(2048)
+# Opening handshake -> no connection or teardown packets will be
+# dropped
+msg, addr = server.recvfrom(header_size)
+_, _, MSS, _, _ = struct.unpack("!2sIII0s", msg)
+send(server, addr, Action.SEND.value, [Packet.SYNACK.value, 0, 0, 0, ""])
+msg, addr = server.recvfrom(MSS + header_size)
 
 # Open and write to file until teardown
 with open(filename, "wb") as file:
     while True:
-        msg, addr = server.recvfrom(2048) # Change buffer size -> SYN then get buffer size from header
+        msg, addr = server.recvfrom(MSS + header_size)
         file.write(msg)
 
 ##################################################################
