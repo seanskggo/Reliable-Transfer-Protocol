@@ -33,6 +33,7 @@ class Packet (enum.Enum):
     SYNACK = "SA"
     FIN = "F"
     FINACK = "FA"
+    NONE = "".encode()
 
 class Action (enum.Enum):
     SEND = "snd"
@@ -46,7 +47,7 @@ class Action (enum.Enum):
 # Create TCP segment using struct (header is 18 bytes)
 def create_ptp_segment(flag, seq, MSS, ack, data):
     return struct.pack(f"!2sIII{MSS}s", 
-        flag.encode(), seq, MSS, ack, data.encode()
+        flag.encode(), seq, MSS, ack, data
     )
 
 # Send TCP packet and log the send in a log file
@@ -72,14 +73,20 @@ server.bind((ip, port))
 # dropped
 msg, addr = server.recvfrom(header_size)
 _, _, MSS, _, _ = struct.unpack("!2sIII0s", msg)
-send(server, addr, Action.SEND.value, [Packet.SYNACK.value, 0, 0, 0, ""])
+send(server, addr, Action.SEND.value, [Packet.SYNACK.value, 0, 0, 0, Packet.NONE.value])
 msg, addr = server.recvfrom(MSS + header_size)
 
 # Open and write to file until teardown
 with open(filename, "wb") as file:
     while True:
         msg, addr = server.recvfrom(MSS + header_size)
-        file.write(msg)
+        # Handle teardown -> no connection or teardown packets will be dropped
+        try: flag, seq, MSS, ack, data = struct.unpack("!2sIII0s", msg) 
+        except: flag, seq, MSS, ack, data = struct.unpack(f"!2sIII{MSS}s", msg)
+        if flag.strip(b'\x00').decode() == Packet.FIN.value:
+            send(server, addr, Action.SEND.value, [Packet.FINACK.value, 0, 0, 0, Packet.NONE.value])
+            break
+        else: file.write(msg)
 
 ##################################################################
 # Test Command

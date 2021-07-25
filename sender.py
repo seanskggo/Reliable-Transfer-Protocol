@@ -37,6 +37,7 @@ class Packet (enum.Enum):
     SYNACK = "SA"
     FIN = "F"
     FINACK = "FA"
+    NONE = "".encode()
 
 class Action (enum.Enum):
     SEND = "snd"
@@ -50,7 +51,7 @@ class Action (enum.Enum):
 # Create TCP segment using struct (header is 18 bytes)
 def create_ptp_segment(flag, seq, MSS, ack, data):
     return struct.pack(f"!2sIII{MSS}s", 
-        flag.encode(), seq, MSS, ack, data.encode()
+        flag.encode(), seq, MSS, ack, data
     )
 
 # Send TCP packet and log the send in a log file
@@ -83,16 +84,20 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Opening handshake -> no connection or teardown packets will be
 # dropped
-send(client, (ip, port), Action.SEND.value, [Packet.SYN.value, 0, MSS, 0, ""])
+send(client, (ip, port), Action.SEND.value, [Packet.SYN.value, 0, MSS, 0, Packet.NONE.value])
 msg, addr = client.recvfrom(MSS + header_size)
-send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, ""])
+send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, Packet.NONE.value])
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "rb") as file:
     packet = file.read(MSS)
     while packet:
-        client.sendto(packet, (ip, port))
+        send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, packet])
         packet = file.read(MSS)
+    # Initiate teardown -> no connection or teardown packets will be dropped
+    send(client, (ip, port), Action.SEND.value, [Packet.FIN.value, 0, 0, 0, Packet.NONE.value])
+    msg, addr = client.recvfrom(MSS + header_size)
+    send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, 0, 0, Packet.NONE.value])
 
 ##################################################################
 # Test Command
