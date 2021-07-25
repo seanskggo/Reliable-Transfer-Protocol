@@ -52,7 +52,7 @@ def create_ptp_segment(flag, seq, MSS, ack, data):
 
 # Send TCP packet and log the send in a log file
 def send(server, addr, ptype, payload):
-    ttime = round(time.time() - epoch, 3)
+    ttime = round((time.time() - epoch) * 1000, 3)
     log.append([ptype, ttime, *payload[1:-1]])
     server.sendto(create_ptp_segment(*payload), addr)
 
