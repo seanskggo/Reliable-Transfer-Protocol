@@ -1,10 +1,19 @@
 #!/bin/bash
 
+if [ "$#" -ne 1 ]
+then
+    echo "USAGE: ./test FILENAME"
+    exit 1
+fi
+
+echo "Using data file: $1"
+
 python3 receiver.py 8000 FileReceived.txt & P1=$!
-python3 sender.py localhost 8000 32KB.txt 256 16 600 0.1 seed1 & P2=$!
+python3 sender.py localhost 8000 $1 256 16 600 0.1 seed1 & P2=$!
 
 echo "Receiver Process: $P1"
 echo "Sender Process: $P2"
+echo ""
 
 checkpids() {
     echo ""
@@ -28,3 +37,17 @@ checkpids() {
 trap "checkpids" SIGINT
 
 wait $P1 $P2
+
+RED="\e[31m"
+GREEN="\e[32m"
+END="\e[0m"
+
+if [[ $(diff FileReceived.txt $1) == "" ]]
+then
+    echo -e "${GREEN}\nPassed!\n${END}"
+else
+    echo -e "${RED}\nFailed!\n${END}"
+    echo -e "Output: \n"
+    diff FileReceived.txt $1
+    echo ""
+fi
