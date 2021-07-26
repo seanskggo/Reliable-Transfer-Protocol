@@ -48,17 +48,30 @@ class Action (enum.Enum):
 # Functions
 ##################################################################
 
-# Create TCP segment using struct (header is 18 bytes)
-def create_ptp_segment(flag, seq, MSS, ack, data):
-    return struct.pack(f"!2sIII{MSS}s", 
-        flag.encode(), seq, MSS, ack, data
-    )
+# # Create TCP segment using struct (header is 18 bytes)
+# def create_ptp_segment(flag, seq, ack, data, MSS):
+#     return struct.pack(f"!2sIII{MSS}s", 
+#         flag.encode(), seq, MSS, ack, data
+#     )
+
+# # Send TCP packet and log the send in a log file
+# def send(client, addr, ptype, payload):
+#     ttime = round((time.time() - epoch) * 1000, 3)
+#     log.append([ptype, ttime, *payload[1:-1]])
+#     client.sendto(create_ptp_segment(*payload), addr)
 
 # Send TCP packet and log the send in a log file
-def send(client, addr, ptype, payload):
+# payload = [seq, ack, data, MSS, send_type, packet_type]
+# data should be encoded
+# send_type: snd etc
+# packet_type: S, SA etc
+def send(client, addr, payload, empty):
+    seq, ack, data, MSS, s_type, p_type = payload
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     ttime = round((time.time() - epoch) * 1000, 3)
-    log.append([ptype, ttime, *payload[1:-1]])
-    client.sendto(create_ptp_segment(*payload), addr)
+    log.append([s_type, ttime, p_type, seq, ack, len(data)])
+    pkt = struct.pack(serial, seq, ack, data, MSS, p_type.encode())
+    client.sendto(pkt, addr)
 
 ##################################################################
 # PTP
@@ -84,22 +97,25 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Opening handshake -> no connection or teardown packets will be
 # dropped
-send(client, (ip, port), Action.SEND.value, [Packet.SYN.value, 0, MSS, 0, Packet.NONE.value])
+send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYN.value], True)
 msg, addr = client.recvfrom(MSS + header_size)
-send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, Packet.NONE.value])
+send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], True)
 
 # Open file for reading. If the file does not exist, throw error
-with open(filename, "rb") as file:
-    packet = file.read(MSS)
-    while packet:
-        send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, packet])
-        packet = file.read(MSS)
-    # Initiate teardown -> no connection or teardown packets will be dropped
-    send(client, (ip, port), Action.SEND.value, [Packet.FIN.value, 0, 0, 0, Packet.NONE.value])
-    msg, addr = client.recvfrom(MSS + header_size)
-    send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, 0, 0, Packet.NONE.value])
+# with open(filename, "rb") as file:
+#     packet = file.read(MSS)
+#     while packet:
+#         send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, packet])
+#         packet = file.read(MSS)
+#     # Initiate teardown -> no connection or teardown packets will be dropped
+#     send(client, (ip, port), Action.SEND.value, [Packet.FIN.value, 0, 0, Packet.NONE.value, MSS])
+#     msg, addr = client.recvfrom(MSS + header_size)
+#     send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, 0, Packet.NONE.value, MSS])
 
-print(log)
+# # Create log file
+# with open("Sender_log.txt", "w") as logfile:
+#     for a, b, c, d, e in log:
+#         logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6}\n")
 
 ##################################################################
 # Test Command

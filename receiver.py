@@ -44,17 +44,33 @@ class Action (enum.Enum):
 # Functions
 ##################################################################
 
-# Create TCP segment using struct (header is 18 bytes)
-def create_ptp_segment(flag, seq, MSS, ack, data):
-    return struct.pack(f"!2sIII{MSS}s", 
-        flag.encode(), seq, MSS, ack, data
-    )
+# # Create TCP segment using struct (header is 18 bytes)
+# def create_ptp_segment(flag, seq, ack, data, MSS):
+#     return struct.pack(f"!2sIII{MSS}s", 
+#         flag.encode(), seq, MSS, ack, data
+#     )
+
+# # Send TCP packet and log the send in a log file
+# def send_data(server, addr, ptype, payload):
+#     ttime = round((time.time() - epoch) * 1000, 3)
+#     log.append([ptype, ttime, *payload[1:-1]])
+#     server.sendto(create_ptp_segment(*payload), addr)
+
+# # Send TCP packet for connection or teardown
+
 
 # Send TCP packet and log the send in a log file
-def send(server, addr, ptype, payload):
+# payload = [seq, ack, data, MSS, send_type, packet_type]
+# data should be encoded
+# send_type: snd etc
+# packet_type: S, SA etc
+def send(server, addr, payload, empty):
+    seq, ack, data, MSS, s_type, p_type = payload
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     ttime = round((time.time() - epoch) * 1000, 3)
-    log.append([ptype, ttime, *payload[1:-1]])
-    server.sendto(create_ptp_segment(*payload), addr)
+    log.append([s_type, ttime, p_type, seq, ack, len(data)])
+    pkt = struct.pack(serial, seq, ack, data, MSS, p_type.encode(),)
+    server.sendto(pkt, addr)
 
 ##################################################################
 # PTP
@@ -69,24 +85,22 @@ except: exit(error)
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
 
-# Opening handshake -> no connection or teardown packets will be
-# dropped
+# Opening handshake -> no connection or teardown packets will be dropped
 msg, addr = server.recvfrom(header_size)
-_, _, MSS, _, _ = struct.unpack("!2sIII0s", msg)
-send(server, addr, Action.SEND.value, [Packet.SYNACK.value, 0, 0, 0, Packet.NONE.value])
+seq, ack, data, MSS, p_type = struct.unpack("!II0sI2s", msg)
+send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYNACK.value], True)
 msg, addr = server.recvfrom(MSS + header_size)
 
 # Open and write to file until teardown
-with open(filename, "wb") as file:
-    while True:
-        msg, addr = server.recvfrom(MSS + header_size)
-        # Handle teardown -> no connection or teardown packets will be dropped
-        try: flag, seq, MSS, ack, data = struct.unpack("!2sIII0s", msg) 
-        except: flag, seq, MSS, ack, data = struct.unpack(f"!2sIII{MSS}s", msg)
-        if flag.strip(b'\x00').decode() == Packet.FIN.value:
-            send(server, addr, Action.SEND.value, [Packet.FINACK.value, 0, 0, 0, Packet.NONE.value])
-            break
-        else: file.write(msg)
+# with open(filename, "wb") as file:
+#     while True:
+#         msg, addr = server.recvfrom(MSS + header_size)
+#         # Handle teardown -> no connection or teardown packets will be dropped
+#         flag, seq, MSS, ack, data = struct.unpack(f"!2sIII{MSS}s", msg)
+#         if flag.strip(b'\x00').decode() == Packet.FIN.value:
+#             send(server, addr, Action.SEND.value, [Packet.FINACK.value, 0, 0, Packet.NONE.value, MSS])
+#             break
+#         else: file.write(msg)
 
 ##################################################################
 # Test Command
