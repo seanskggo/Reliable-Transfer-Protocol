@@ -44,21 +44,6 @@ class Action (enum.Enum):
 # Functions
 ##################################################################
 
-# # Create TCP segment using struct (header is 18 bytes)
-# def create_ptp_segment(flag, seq, ack, data, MSS):
-#     return struct.pack(f"!2sIII{MSS}s", 
-#         flag.encode(), seq, MSS, ack, data
-#     )
-
-# # Send TCP packet and log the send in a log file
-# def send_data(server, addr, ptype, payload):
-#     ttime = round((time.time() - epoch) * 1000, 3)
-#     log.append([ptype, ttime, *payload[1:-1]])
-#     server.sendto(create_ptp_segment(*payload), addr)
-
-# # Send TCP packet for connection or teardown
-
-
 # Send TCP packet and log the send in a log file
 # payload = [seq, ack, data, MSS, send_type, packet_type]
 # data should be encoded
@@ -92,15 +77,15 @@ send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYNA
 msg, addr = server.recvfrom(MSS + header_size)
 
 # Open and write to file until teardown
-# with open(filename, "wb") as file:
-#     while True:
-#         msg, addr = server.recvfrom(MSS + header_size)
-#         # Handle teardown -> no connection or teardown packets will be dropped
-#         flag, seq, MSS, ack, data = struct.unpack(f"!2sIII{MSS}s", msg)
-#         if flag.strip(b'\x00').decode() == Packet.FIN.value:
-#             send(server, addr, Action.SEND.value, [Packet.FINACK.value, 0, 0, Packet.NONE.value, MSS])
-#             break
-#         else: file.write(msg)
+with open(filename, "wb") as file:
+    while True:
+        msg, addr = server.recvfrom(MSS + header_size)
+        # Handle teardown -> no connection or teardown packets will be dropped
+        seq, ack, data, MSS, p_type = struct.unpack(f"!II{MSS}sI2s", msg)
+        if p_type.strip(b'\x00').decode() == Packet.FIN.value:
+            send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], False)
+            break
+        else: file.write(msg)
 
 ##################################################################
 # Test Command

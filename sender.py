@@ -48,18 +48,6 @@ class Action (enum.Enum):
 # Functions
 ##################################################################
 
-# # Create TCP segment using struct (header is 18 bytes)
-# def create_ptp_segment(flag, seq, ack, data, MSS):
-#     return struct.pack(f"!2sIII{MSS}s", 
-#         flag.encode(), seq, MSS, ack, data
-#     )
-
-# # Send TCP packet and log the send in a log file
-# def send(client, addr, ptype, payload):
-#     ttime = round((time.time() - epoch) * 1000, 3)
-#     log.append([ptype, ttime, *payload[1:-1]])
-#     client.sendto(create_ptp_segment(*payload), addr)
-
 # Send TCP packet and log the send in a log file
 # payload = [seq, ack, data, MSS, send_type, packet_type]
 # data should be encoded
@@ -102,20 +90,20 @@ msg, addr = client.recvfrom(MSS + header_size)
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], True)
 
 # Open file for reading. If the file does not exist, throw error
-# with open(filename, "rb") as file:
-#     packet = file.read(MSS)
-#     while packet:
-#         send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, MSS, 0, packet])
-#         packet = file.read(MSS)
-#     # Initiate teardown -> no connection or teardown packets will be dropped
-#     send(client, (ip, port), Action.SEND.value, [Packet.FIN.value, 0, 0, Packet.NONE.value, MSS])
-#     msg, addr = client.recvfrom(MSS + header_size)
-#     send(client, (ip, port), Action.SEND.value, [Packet.ACK.value, 0, 0, Packet.NONE.value, MSS])
+with open(filename, "rb") as file:
+    packet = file.read(MSS)
+    while packet:
+        send(client, (ip, port), [0, 0, packet, MSS, Action.SEND.value, Packet.ACK.value], False)
+        packet = file.read(MSS)
+    # Initiate teardown -> no connection or teardown packets will be dropped
+    send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FIN.value,], False)
+    msg, addr = client.recvfrom(MSS + header_size)
+    send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], False)
 
-# # Create log file
-# with open("Sender_log.txt", "w") as logfile:
-#     for a, b, c, d, e in log:
-#         logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6}\n")
+# Create log file
+with open("Sender_log.txt", "w") as logfile:
+    for a, b, c, d, e, f in log:
+        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
 
 ##################################################################
 # Test Command
