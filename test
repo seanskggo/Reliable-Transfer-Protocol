@@ -51,11 +51,11 @@ else
     echo ""
 fi
 
-echo -e "Sender_log.txt: \n"
+echo -e "-------------- Sender_log.txt --------------\n"
 
 cat Sender_log.txt
 
-echo""
+echo -e "\n------------- Receiver_log.txt -------------\n"
 
 cat Receiver_log.txt
 

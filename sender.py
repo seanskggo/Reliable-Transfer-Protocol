@@ -100,7 +100,7 @@ receive(client, MSS, True)
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], True)
 
 # Open file for reading. If the file does not exist, throw error
-with open(filename, "rb") as file:
+with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
         send(client, (ip, port), [0, 0, packet, MSS, Action.SEND.value, Packet.DATA.value], False)

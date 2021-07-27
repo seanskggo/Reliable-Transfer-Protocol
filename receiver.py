@@ -67,7 +67,7 @@ def receive(server, MSS, empty):
     seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
     ttime = round((time.time() - epoch) * 1000, 3)
     log.append([Action.RECEIVE.value, ttime, p_type, seq, ack, len(data)])
-    return (msg, addr, MSS)
+    return ((seq, ack, data, MSS, p_type), addr)
 
 ##################################################################
 # PTP
@@ -84,20 +84,19 @@ server.bind((ip, port))
 
 # Opening handshake -> no connection or teardown packets will be dropped
 # Received and sets the MSS for the TCP connection
-msg, addr, MSS = receive(server, MSS, True)
+(_, _, _, MSS, _), addr = receive(server, MSS, True)
 send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYNACK.value], True)
-msg, addr, _ = receive(server, MSS, True)
+receive(server, MSS, True)
 
 # Open and write to file until teardown
-with open(filename, "wb") as file:
+with open(filename, "w") as file:
     while True:
-        msg, addr = server.recvfrom(MSS + header_size)
+        (seq, ack, data, MSS, p_type), addr = receive(server, MSS, False)
         # Handle teardown -> no connection or teardown packets will be dropped
-        seq, ack, data, MSS, p_type = struct.unpack(f"!II{MSS}sI2s", msg)
-        if p_type.strip(b'\x00').decode() == Packet.FIN.value:
+        if p_type == Packet.FIN.value:
             send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], True)
             break
-        else: file.write(msg)
+        file.write(data)
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:
