@@ -83,8 +83,7 @@ if MSS <= 0: exit(MSS_error)
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Opening handshake -> no connection or teardown packets will be
-# dropped
+# Opening handshake -> no connection or teardown packets will be dropped
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYN.value], True)
 msg, addr = client.recvfrom(MSS + header_size)
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], True)
@@ -93,7 +92,7 @@ send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packe
 with open(filename, "rb") as file:
     packet = file.read(MSS)
     while packet:
-        send(client, (ip, port), [0, 0, packet, MSS, Action.SEND.value, Packet.ACK.value], False)
+        send(client, (ip, port), [0, 0, packet, MSS, Action.SEND.value, Packet.DATA.value], False)
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
     send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FIN.value,], False)
