@@ -20,11 +20,11 @@ import struct
 ##################################################################
 
 IP = '127.0.0.1'
-RECEIVER_ERROR = 'USAGE: python receiver.py receiver_port FileReceiverd.txt'
-SENDER_ERROR = (
-    'USAGE: python sender.py receiver_host_ip receiver_port '
+RECEIVER_ERROR = \
+    'USAGE: python receiver.py receiver_port FileReceiverd.txt'
+SENDER_ERROR = \
+    'USAGE: python sender.py receiver_host_ip receiver_port ' \
     + 'FileToSend.txt MWS MSS timeout pdrop seed'
-)
 PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
 MSS_ERROR = 'Maximum Segment Size must be greater than 0'
 EPOCH = time.time()
@@ -34,7 +34,7 @@ HEADER_SIZE = 14
 # API
 ##################################################################
 
-# Enum for packet types
+# Packet types
 class Packet:
     SYN = "S"
     ACK = "A"
@@ -44,7 +44,7 @@ class Packet:
     FINACK = "FA"
     NONE = ""
 
-# Enum for packet action types
+# Packet action types
 class Action:
     SEND = "snd"
     RECEIVE = "rcv"
