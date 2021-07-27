@@ -41,6 +41,14 @@ RED="\e[31m"
 GREEN="\e[32m"
 END="\e[0m"
 
+echo -e "\n----------- Sender_log.txt ------------\n"
+
+cat Sender_log.txt
+
+echo -e "\n---------- Receiver_log.txt -----------\n"
+
+cat Receiver_log.txt
+
 if [[ $(diff FileReceived.txt $1) == "" ]]
 then
     echo -e "${GREEN}\nPassed!\n${END}"
@@ -50,14 +58,3 @@ else
     diff FileReceived.txt $1
     echo ""
 fi
-
-echo -e "-------------- Sender_log.txt --------------\n"
-
-cat Sender_log.txt
-
-echo -e "\n------------- Receiver_log.txt -------------\n"
-
-cat Receiver_log.txt
-
-echo ""
-
