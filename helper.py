@@ -13,6 +13,23 @@
 ##################################################################
 
 import enum
+import time
+import struct
+
+##################################################################
+# Constants
+##################################################################
+
+IP = '127.0.0.1'
+RECEIVER_ERROR = 'USAGE: python receiver.py receiver_port FileReceiverd.txt'
+SENDER_ERROR = (
+    'USAGE: python sender.py receiver_host_ip receiver_port '
+    + 'FileToSend.txt MWS MSS timeout pdrop seed'
+)
+PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
+MSS_ERROR = 'Maximum Segment Size must be greater than 0'
+EPOCH = time.time()
+HEADER_SIZE = 14
 
 ##################################################################
 # API
@@ -40,8 +57,28 @@ def rm_null_bytes(byte_string):
 
 # Decode all encoded children of payload
 def decoder(payload):
-    return [rm_null_bytes(i).decode() if type(i) == bytes else i for i in payload]
+    return [rm_null_bytes(i).decode() if type(i) == bytes 
+        else i for i in payload]
 
 # Encode all dencoded children of payload
 def encoder(payload):
     return [i.encode() if type(i) == str else i for i in payload]
+
+# Recieve and log TCP packet
+def receive(body, MSS, log, empty):
+    msg, addr = body.recvfrom(MSS + HEADER_SIZE)
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
+    seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
+    ttime = round((time.time() - EPOCH) * 1000, 3)
+    log.append([Action.RECEIVE.value, ttime, p_type, seq, ack, len(data)])
+    return ((seq, ack, data, MSS, p_type), addr)
+
+# Send and log TCP packet
+# payload: [seq, ack, data, MSS, send_type, packet_type]
+def send(body, addr, payload, log, empty):
+    seq, ack, data, MSS, s_type, p_type = payload
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
+    ttime = round((time.time() - EPOCH) * 1000, 3)
+    log.append([s_type, ttime, p_type, seq, ack, len(data)])
+    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
+    body.sendto(pkt, addr)
