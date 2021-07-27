@@ -12,7 +12,6 @@
 # Imports
 ##################################################################
 
-import enum
 import time
 import struct
 
@@ -36,7 +35,7 @@ HEADER_SIZE = 14
 ##################################################################
 
 # Enum for packet types
-class Packet (enum.Enum):
+class Packet:
     SYN = "S"
     ACK = "A"
     DATA = "D"
@@ -46,7 +45,7 @@ class Packet (enum.Enum):
     NONE = ""
 
 # Enum for packet action types
-class Action (enum.Enum):
+class Action:
     SEND = "snd"
     RECEIVE = "rcv"
     DROP = "drop"
@@ -70,7 +69,7 @@ def receive(body, MSS, log, empty):
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
     ttime = round((time.time() - EPOCH) * 1000, 3)
-    log.append([Action.RECEIVE.value, ttime, p_type, seq, ack, len(data)])
+    log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
     return ((seq, ack, data, MSS, p_type), addr)
 
 # Send and log TCP packet

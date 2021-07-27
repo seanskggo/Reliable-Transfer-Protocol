@@ -31,7 +31,7 @@ log = list()
 # Opening handshake -> no connection or teardown packets will be dropped
 # Received and sets the MSS for the TCP connection
 (_, _, _, MSS, _), addr = receive(server, MSS, log, True)
-send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYNACK.value], log, True)
+send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.SYNACK], log, True)
 receive(server, MSS, log, True)
 
 # Open and write to file until teardown
@@ -39,8 +39,8 @@ with open(filename, "w") as file:
     while True:
         (seq, ack, data, MSS, p_type), addr = receive(server, MSS, log, False)
         # Handle teardown -> no connection or teardown packets will be dropped
-        if p_type == Packet.FIN.value:
-            send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], log, True)
+        if p_type == Packet.FIN:
+            send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FINACK], log, True)
             receive(server, MSS, log, True)
             break
         file.write(data)
@@ -49,8 +49,8 @@ with open(filename, "w") as file:
 with open("Receiver_log.txt", "w") as logfile:
     tot_data, num_seg, num_dup = [0] * 3
     for a, b, c, d, e, f in log:
-        if a == Action.RECEIVE.value: tot_data += f
-        if a == Action.RECEIVE.value and c == Packet.DATA.value: num_seg += 1
+        if a == Action.RECEIVE: tot_data += f
+        if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
         logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
