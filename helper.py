@@ -66,9 +66,9 @@ def encoder(payload):
 # Recieve and log TCP packet
 def receive(body, MSS, log, empty):
     msg, addr = body.recvfrom(MSS + HEADER_SIZE)
+    ttime = round((time.time() - EPOCH) * 1000, 3)
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
-    ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
     return ((seq, ack, data, MSS, p_type), addr)
 
@@ -77,7 +77,7 @@ def receive(body, MSS, log, empty):
 def send(body, addr, payload, log, empty):
     seq, ack, data, MSS, s_type, p_type = payload
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
+    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
-    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     body.sendto(pkt, addr)
