@@ -83,7 +83,7 @@ with open(filename, "wb") as file:
         # Handle teardown -> no connection or teardown packets will be dropped
         seq, ack, data, MSS, p_type = struct.unpack(f"!II{MSS}sI2s", msg)
         if p_type.strip(b'\x00').decode() == Packet.FIN.value:
-            send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], False)
+            send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], True)
             break
         else: file.write(msg)
 

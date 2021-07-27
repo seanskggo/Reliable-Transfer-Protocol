@@ -61,6 +61,16 @@ def send(client, addr, payload, empty):
     pkt = struct.pack(serial, seq, ack, data, MSS, p_type.encode())
     client.sendto(pkt, addr)
 
+# Recieve TCP packet and log the send in a log file
+# send_type: snd etc
+# packet_type: S, SA etc
+def receive(client, MSS, empty):
+    msg, _ = client.recvfrom(MSS + header_size)
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
+    seq, ack, data, MSS, p_type = struct.unpack(serial, msg)
+    ttime = round((time.time() - epoch) * 1000, 3)
+    log.append([Action.RECEIVE.value, ttime, p_type.decode(), seq, ack, len(data)])
+
 ##################################################################
 # PTP
 ##################################################################
@@ -85,7 +95,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Opening handshake -> no connection or teardown packets will be dropped
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYN.value], True)
-msg, addr = client.recvfrom(MSS + header_size)
+receive(client, MSS, True)
 send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], True)
 
 # Open file for reading. If the file does not exist, throw error
@@ -95,14 +105,21 @@ with open(filename, "rb") as file:
         send(client, (ip, port), [0, 0, packet, MSS, Action.SEND.value, Packet.DATA.value], False)
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FIN.value,], False)
-    msg, addr = client.recvfrom(MSS + header_size)
+    send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FIN.value], False)
+    receive(client, MSS, True)
     send(client, (ip, port), [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.ACK.value], False)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
     for a, b, c, d, e, f in log:
         logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
+    tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
+    logfile.write("\n--------- Log File Statistics ---------\n\n")
+    logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")
+    logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
+    logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
+    logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
+    logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n")
 
 ##################################################################
 # Test Command

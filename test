@@ -55,5 +55,5 @@ echo -e "Sender_log.txt: \n"
 
 cat Sender_log.txt
 
-echo -e "\n"
+echo ""
 
