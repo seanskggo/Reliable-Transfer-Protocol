@@ -111,9 +111,10 @@ with open(filename, "rb") as file:
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
-    for a, b, c, d, e, f in log:
-        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
+    for a, b, c, d, e, f in log:
+        if a == Action.SEND.value: tot_data += f
+        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")
     logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
