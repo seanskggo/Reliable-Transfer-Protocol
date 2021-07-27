@@ -15,6 +15,7 @@ import socket
 import time
 import struct
 import enum
+from helper import encoder, decoder
 
 ##################################################################
 # Constants and Classes
@@ -33,7 +34,7 @@ class Packet (enum.Enum):
     SYNACK = "SA"
     FIN = "F"
     FINACK = "FA"
-    NONE = "".encode()
+    NONE = ""
 
 class Action (enum.Enum):
     SEND = "snd"
@@ -54,8 +55,19 @@ def send(server, addr, payload, empty):
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     ttime = round((time.time() - epoch) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
-    pkt = struct.pack(serial, seq, ack, data, MSS, p_type.encode(),)
+    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     server.sendto(pkt, addr)
+
+# Recieve TCP packet and log the send in a log file
+# send_type: snd etc
+# packet_type: S, SA etc
+def receive(server, MSS, empty):
+    msg, addr = server.recvfrom(MSS + header_size)
+    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
+    seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
+    ttime = round((time.time() - epoch) * 1000, 3)
+    log.append([Action.RECEIVE.value, ttime, p_type, seq, ack, len(data)])
+    return (msg, addr, MSS)
 
 ##################################################################
 # PTP
@@ -63,7 +75,7 @@ def send(server, addr, payload, empty):
 
 # Parse commandline arguments
 if (len(sys.argv) != 3): exit(error)
-try: port, filename = int(sys.argv[1]), sys.argv[2]
+try: port, filename, MSS = int(sys.argv[1]), sys.argv[2], 0
 except: exit(error)
 
 # Create UDP socket server
@@ -71,10 +83,10 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((ip, port))
 
 # Opening handshake -> no connection or teardown packets will be dropped
-msg, addr = server.recvfrom(header_size)
-seq, ack, data, MSS, p_type = struct.unpack("!II0sI2s", msg)
+# Received and sets the MSS for the TCP connection
+msg, addr, MSS = receive(server, MSS, True)
 send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.SYNACK.value], True)
-msg, addr = server.recvfrom(MSS + header_size)
+msg, addr, _ = receive(server, MSS, True)
 
 # Open and write to file until teardown
 with open(filename, "wb") as file:
@@ -86,6 +98,18 @@ with open(filename, "wb") as file:
             send(server, addr, [0, 0, Packet.NONE.value, MSS, Action.SEND.value, Packet.FINACK.value], True)
             break
         else: file.write(msg)
+
+# Create log file
+with open("Receiver_log.txt", "w") as logfile:
+    tot_data, num_seg, num_dup = [0] * 3
+    for a, b, c, d, e, f in log:
+        if a == Action.SEND.value: tot_data += f
+        if a == Action.SEND.value and c == Packet.DATA.value: num_seg += 1
+        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
+    logfile.write("\n--------- Log File Statistics ---------\n\n")
+    logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
+    logfile.write(f"No. Data Segments Received:      {num_seg}\n")
+    logfile.write(f"No. Duplicate Segments:          {num_dup}\n")
 
 ##################################################################
 # Test Command

@@ -15,6 +15,7 @@ import socket
 import struct
 import time
 import enum
+from helper import encoder, decoder
 
 ##################################################################
 # Constants
@@ -37,7 +38,7 @@ class Packet (enum.Enum):
     SYNACK = "SA"
     FIN = "F"
     FINACK = "FA"
-    NONE = "".encode()
+    NONE = ""
 
 class Action (enum.Enum):
     SEND = "snd"
@@ -54,11 +55,11 @@ class Action (enum.Enum):
 # send_type: snd etc
 # packet_type: S, SA etc
 def send(client, addr, payload, empty):
-    seq, ack, data, MSS, s_type, p_type = payload
+    seq, ack, data, MSS, s_type, p_type = decoder(payload)
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     ttime = round((time.time() - epoch) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
-    pkt = struct.pack(serial, seq, ack, data, MSS, p_type.encode())
+    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     client.sendto(pkt, addr)
 
 # Recieve TCP packet and log the send in a log file
@@ -67,9 +68,9 @@ def send(client, addr, payload, empty):
 def receive(client, MSS, empty):
     msg, _ = client.recvfrom(MSS + header_size)
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
-    seq, ack, data, MSS, p_type = struct.unpack(serial, msg)
+    seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
     ttime = round((time.time() - epoch) * 1000, 3)
-    log.append([Action.RECEIVE.value, ttime, p_type.decode(), seq, ack, len(data)])
+    log.append([Action.RECEIVE.value, ttime, p_type, seq, ack, len(data)])
 
 ##################################################################
 # PTP
