@@ -12,6 +12,28 @@
 # Imports
 ##################################################################
 
+import enum
+
+##################################################################
+# API
+##################################################################
+
+# Enum for packet types
+class Packet (enum.Enum):
+    SYN = "S"
+    ACK = "A"
+    DATA = "D"
+    SYNACK = "SA"
+    FIN = "F"
+    FINACK = "FA"
+    NONE = ""
+
+# Enum for packet action types
+class Action (enum.Enum):
+    SEND = "snd"
+    RECEIVE = "rcv"
+    DROP = "drop"
+
 # Remove null bytes from given bytes string
 def rm_null_bytes(byte_string):
     return byte_string.strip(b'\x00')

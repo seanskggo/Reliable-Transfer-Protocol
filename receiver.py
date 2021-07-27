@@ -14,8 +14,7 @@ import sys
 import socket
 import time
 import struct
-import enum
-from helper import encoder, decoder
+from helper import *
 
 ##################################################################
 # Constants and Classes
@@ -26,20 +25,6 @@ ip = '127.0.0.1'
 log = list()
 epoch = time.time()
 header_size = 14
-
-class Packet (enum.Enum):
-    SYN = "S"
-    ACK = "A"
-    DATA = "D"
-    SYNACK = "SA"
-    FIN = "F"
-    FINACK = "FA"
-    NONE = ""
-
-class Action (enum.Enum):
-    SEND = "snd"
-    RECEIVE = "rcv"
-    DROP = "drop"
 
 ##################################################################
 # Functions

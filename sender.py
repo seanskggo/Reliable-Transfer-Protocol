@@ -14,8 +14,7 @@ import sys
 import socket
 import struct
 import time
-import enum
-from helper import encoder, decoder
+from helper import *
 
 ##################################################################
 # Constants
@@ -30,20 +29,6 @@ MSS_error = 'Maximum Segment Size must be greater than 0'
 log = list()
 epoch = time.time()
 header_size = 14
-
-class Packet (enum.Enum):
-    SYN = "S"
-    ACK = "A"
-    DATA = "D"
-    SYNACK = "SA"
-    FIN = "F"
-    FINACK = "FA"
-    NONE = ""
-
-class Action (enum.Enum):
-    SEND = "snd"
-    RECEIVE = "rcv"
-    DROP = "drop"
 
 ##################################################################
 # Functions
