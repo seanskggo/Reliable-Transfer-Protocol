@@ -50,23 +50,25 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.settimeout(timeout/1000)
 log = list()
 
+# Set initial sequence number and ack
+seq, ack = 121, 0
+
 # Opening handshake -> no connection or teardown packets will be dropped
-send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.SYN], log, True)
-receive(client, MSS, log, True)
-send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
+send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.SYN], log, True)
+seq, ack = receive(client, MSS, log, True)[0][0:2]
+send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        if PL_module(pdrop): 
-            send(client, (ip, port), [0, 0, packet, MSS, Action.SEND, Packet.DATA], log, False)
-        receive(client, MSS, log, True)
+        send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
+        seq, ack = receive(client, MSS, log, True)[0][0:2]
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
-    receive(client, MSS, log, True)
-    send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
+    send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
+    seq, ack = receive(client, MSS, log, True)[0][0:2]
+    send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
@@ -74,10 +76,22 @@ with open("Sender_log.txt", "w") as logfile:
     for a, b, c, d, e, f in log:
         if a == Action.SEND: tot_data += f
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
-        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
+        logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {e:<6} {f:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")
     logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
     logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
     logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n")
+
+##################################################################
+# Ideas
+##################################################################
+
+# def check_timeout(action):
+#     try: 
+#         if PL_module(pdrop): 
+#             send(client, (ip, port), [0, 0, packet, MSS, action, Packet.DATA], log, False)
+#         receive(client, MSS, log, True)
+#     except: check_timeout(Action.DROP)
+# check_timeout(Action.SEND)

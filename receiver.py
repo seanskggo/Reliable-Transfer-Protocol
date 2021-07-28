@@ -28,11 +28,14 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((IP, port))
 log = list()
 
+# Set initial sequence number and ack
+seq, ack = 154, 0
+
 # Opening handshake -> no connection or teardown packets will be dropped
 # Received and sets the MSS for the TCP connection
 (_, _, _, MSS, _), addr = receive(server, MSS, log, True)
-send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.SYNACK], log, True)
-receive(server, MSS, log, True)
+send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.SYNACK], log, True)
+seq, ack = receive(server, MSS, log, True)[0][0:2]
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
@@ -40,10 +43,10 @@ with open(filename, "w") as file:
         (seq, ack, data, MSS, p_type), addr = receive(server, MSS, log, False)
         # Handle teardown -> no connection or teardown packets will be dropped
         if p_type == Packet.FIN:
-            send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FINACK], log, True)
-            receive(server, MSS, log, True)
+            send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.FINACK], log, True)
+            seq, ack = receive(server, MSS, log, True)[0][0:2]
             break
-        send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
+        send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
         file.write(data)
 
 # Create log file
@@ -52,7 +55,7 @@ with open("Receiver_log.txt", "w") as logfile:
     for a, b, c, d, e, f in log:
         if a == Action.RECEIVE: tot_data += f
         if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
-        logfile.write(f"{a:<5} {b:<8} {c:<6} {d:<6} {e:<6} {f:<6}\n")
+        logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {e:<6} {f:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
     logfile.write(f"No. Data Segments Received:      {num_seg}\n")
