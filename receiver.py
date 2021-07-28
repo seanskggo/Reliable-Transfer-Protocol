@@ -43,6 +43,7 @@ with open(filename, "w") as file:
             send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FINACK], log, True)
             receive(server, MSS, log, True)
             break
+        send(server, addr, [0, 0, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
         file.write(data)
 
 # Create log file

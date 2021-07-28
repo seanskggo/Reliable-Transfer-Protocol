@@ -48,6 +48,7 @@ with open(filename, "r") as file:
     while packet:
         send(client, (ip, port), [0, 0, packet, MSS, Action.SEND, Packet.DATA], log, False)
         packet = file.read(MSS)
+        receive(client, MSS, log, True)
     # Initiate teardown -> no connection or teardown packets will be dropped
     send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
     receive(client, MSS, log, True)
