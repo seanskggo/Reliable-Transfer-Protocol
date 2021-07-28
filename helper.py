@@ -69,6 +69,7 @@ def receive(body, MSS, log, empty) -> set:
     ttime = round((time.time() - EPOCH) * 1000, 3)
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
+    seq += len(data)
     log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
     return ((seq, ack, data, MSS, p_type), addr)
 
