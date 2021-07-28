@@ -55,7 +55,7 @@ with open("Receiver_log.txt", "w") as logfile:
     for a, b, c, d, e, f in log:
         if a == Action.RECEIVE: tot_data += f
         if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
-        logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {e:<6} {f:<6}\n")
+        logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
     logfile.write(f"No. Data Segments Received:      {num_seg}\n")
