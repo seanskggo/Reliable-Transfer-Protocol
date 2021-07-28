@@ -33,18 +33,18 @@ seq, ack = 154, 0
 
 # Opening handshake -> no connection or teardown packets will be dropped
 # Received and sets the MSS for the TCP connection
-(_, _, _, MSS, _), addr = receive(server, MSS, log, True)
+(ack, _, _, MSS, _), addr = receive(server, MSS, log, True)
 send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.SYNACK], log, True)
-seq, ack = receive(server, MSS, log, True)[0][0:2]
+ack, seq = receive(server, MSS, log, True)[0][0:2]
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
     while True:
-        (seq, ack, data, MSS, p_type), addr = receive(server, MSS, log, False)
+        (ack, seq, data, MSS, p_type), addr = receive(server, MSS, log, False)
         # Handle teardown -> no connection or teardown packets will be dropped
         if p_type == Packet.FIN:
             send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.FINACK], log, True)
-            seq, ack = receive(server, MSS, log, True)[0][0:2]
+            ack, seq = receive(server, MSS, log, True)[0][0:2]
             break
         send(server, addr, [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
         file.write(data)
