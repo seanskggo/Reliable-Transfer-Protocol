@@ -51,20 +51,20 @@ class Action:
     DROP = "drop"
 
 # Remove null bytes from given bytes string
-def rm_null_bytes(byte_string):
+def rm_null_bytes(byte_string) -> bytes:
     return byte_string.strip(b'\x00')
 
 # Decode all encoded children of payload
-def decoder(payload):
+def decoder(payload) -> list:
     return [rm_null_bytes(i).decode() if type(i) == bytes 
         else i for i in payload]
 
 # Encode all dencoded children of payload
-def encoder(payload):
+def encoder(payload) -> list:
     return [i.encode() if type(i) == str else i for i in payload]
 
 # Recieve and log TCP packet
-def receive(body, MSS, log, empty):
+def receive(body, MSS, log, empty) -> set:
     msg, addr = body.recvfrom(MSS + HEADER_SIZE)
     ttime = round((time.time() - EPOCH) * 1000, 3)
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
@@ -74,10 +74,11 @@ def receive(body, MSS, log, empty):
 
 # Send and log TCP packet
 # payload: [seq, ack, data, MSS, send_type, packet_type]
-def send(body, addr, payload, log, empty):
+def send(body, addr, payload, log, empty) -> set:
     seq, ack, data, MSS, s_type, p_type = payload
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
     body.sendto(pkt, addr)
+

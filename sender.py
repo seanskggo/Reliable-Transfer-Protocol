@@ -12,7 +12,16 @@
 
 import sys
 import socket
+import random
 from helper import *
+
+##################################################################
+# Sender Functions
+##################################################################
+
+# PL Module for dropping segments
+def PL_module(pdrop) -> bool:
+    return True if random.random() > pdrop else False
 
 ##################################################################
 # PTP
@@ -33,8 +42,12 @@ except: exit(SENDER_ERROR)
 if not 0 < pdrop < 1: exit(PDROP_ERROR)
 if MSS <= 0: exit(MSS_ERROR)
 
+# Set seed for PL module
+random.seed(seed)
+
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client.settimeout(timeout/1000)
 log = list()
 
 # Opening handshake -> no connection or teardown packets will be dropped
@@ -46,9 +59,10 @@ send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.ACK], log,
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        send(client, (ip, port), [0, 0, packet, MSS, Action.SEND, Packet.DATA], log, False)
-        packet = file.read(MSS)
+        if PL_module(pdrop): 
+            send(client, (ip, port), [0, 0, packet, MSS, Action.SEND, Packet.DATA], log, False)
         receive(client, MSS, log, True)
+        packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
     send(client, (ip, port), [0, 0, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
     receive(client, MSS, log, True)
