@@ -29,7 +29,7 @@ SENDER_ERROR = \
 PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
 MSS_ERROR = 'Maximum Segment Size must be greater than 0'
 EPOCH = time.time()
-HEADER_SIZE = 14
+HEADER_SIZE = 18
 
 ##################################################################
 # API
@@ -68,19 +68,19 @@ def encoder(payload) -> list:
 def receive(body, MSS, log, empty) -> set:
     msg, addr = body.recvfrom(MSS + HEADER_SIZE)
     ttime = round((time.time() - EPOCH) * 1000, 3)
-    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
-    seq, ack, data, MSS, p_type = decoder(struct.unpack(serial, msg))
+    serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
+    seq, ack, data, MSS, MWS, p_type = decoder(struct.unpack(serial, msg))
     log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
     if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
     else: seq += len(data)
-    return ((seq, ack, data, MSS, p_type), addr)
+    return ((seq, ack, data, MSS, MWS, p_type), addr)
 
 # Send and log TCP packet
 # payload: [seq, ack, data, MSS, send_type, packet_type]
 def send(body, addr, payload, log, empty) -> int:
-    seq, ack, data, MSS, s_type, p_type = payload
-    serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
-    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
+    seq, ack, data, MSS, MWS, s_type, p_type = payload
+    serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
+    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, MWS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
     if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1

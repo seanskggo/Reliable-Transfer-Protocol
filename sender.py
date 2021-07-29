@@ -54,21 +54,21 @@ log = list()
 seq, ack = 121, 0
 
 # Opening handshake -> no connection or teardown packets will be dropped
-seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.SYN], log, True)
+seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.SYN], log, True)
 ack = receive(client, MSS, log, True)[0][0]
-seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
+seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.ACK], log, True)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        seq = send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
+        seq = send(client, (ip, port), [seq, ack, packet, MSS, MWS, Action.SEND, Packet.DATA], log, False)
         ack = receive(client, MSS, log, True)[0][0]
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
+    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.FIN], log, False)
     ack = receive(client, MSS, log, True)[0][0]
-    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], log, True)
+    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.ACK], log, True)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
