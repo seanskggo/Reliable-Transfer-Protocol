@@ -77,13 +77,16 @@ def receive(body, MSS, log, empty) -> set:
 
 # Send and log TCP packet
 # payload: [seq, ack, data, MSS, send_type, packet_type]
-def send(body, addr, payload, log, empty) -> set:
+def send(body, addr, payload, log, empty) -> int:
     seq, ack, data, MSS, s_type, p_type = payload
     serial = "!II0sI2s" if empty else f"!II{MSS}sI2s"
     pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
+    if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
+    else: seq += len(data)
     if s_type != Action.DROP: body.sendto(pkt, addr)
+    return seq
 
 # TCP Window class
 class Window:
