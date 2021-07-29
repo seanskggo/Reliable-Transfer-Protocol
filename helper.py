@@ -82,5 +82,4 @@ def send(body, addr, payload, log, empty) -> set:
     pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
-    body.sendto(pkt, addr)
-
+    if s_type != Action.DROP: body.sendto(pkt, addr)

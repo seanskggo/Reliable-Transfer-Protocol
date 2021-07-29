@@ -61,9 +61,17 @@ send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.ACK], 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
-    while packet:
-        send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
+    def send_packet():
+        global seq, ack
+        if PL_module(pdrop): 
+            send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
+        else: send(client, (ip, port), [seq, ack, packet, MSS, Action.DROP, Packet.DATA], log, False)
         ack, seq = receive(client, MSS, log, True)[0][0:2]
+    def check_timeout():
+        try: send_packet()
+        except: check_timeout()
+    while packet:
+        check_timeout()
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
     send(client, (ip, port), [seq, ack, Packet.NONE, MSS, Action.SEND, Packet.FIN], log, False)
@@ -95,3 +103,6 @@ with open("Sender_log.txt", "w") as logfile:
 #         receive(client, MSS, log, True)
 #     except: check_timeout(Action.DROP)
 # check_timeout(Action.SEND)
+
+# send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
+# ack, seq = receive(client, MSS, log, True)[0][0:2]
