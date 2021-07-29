@@ -14,6 +14,7 @@
 
 import time
 import struct
+import collections
 
 ##################################################################
 # Constants
@@ -83,3 +84,12 @@ def send(body, addr, payload, log, empty) -> set:
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
     if s_type != Action.DROP: body.sendto(pkt, addr)
+
+# TCP Window class
+class Window:
+    def __init__(self, size) -> None:
+        self.size = size
+        self.window = collections.deque([])
+    
+    def send(self):
+        pass
