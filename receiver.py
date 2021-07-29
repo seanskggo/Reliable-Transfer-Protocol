@@ -42,12 +42,11 @@ with open(filename, "w") as file:
     while True:
         (ack, _, data, MSS, MWS, p_type), addr = receive(server, MSS, log, False)
         # Handle teardown -> no connection or teardown packets will be dropped
-        if p_type == Packet.FIN:
-            seq = send(server, addr, [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.FINACK], log, True)
-            ack = receive(server, MSS, log, True)[0][0]
-            break
+        if p_type == Packet.FIN: break
         send(server, addr, [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.ACK], log, True)
         file.write(data)
+    seq = send(server, addr, [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.FINACK], log, True)
+    ack = receive(server, MSS, log, True)[0][0]
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:
