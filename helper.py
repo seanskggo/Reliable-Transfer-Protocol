@@ -51,18 +51,19 @@ class Action:
     RECEIVE = "rcv"
     DROP = "drop"
 
-# Remove null bytes from given bytes string
-def rm_null_bytes(byte_string) -> bytes:
-    return byte_string.strip(b'\x00')
+class Modifier:
+    # Remove null bytes from given bytes string
+    def rm_null_bytes(self, byte_string) -> bytes:
+        return byte_string.strip(b'\x00')
 
-# Decode all encoded children of payload
-def decoder(payload) -> list:
-    return [rm_null_bytes(i).decode() if type(i) == bytes 
-        else i for i in payload]
+    # Decode all encoded children of payload
+    def decoder(self, payload) -> list:
+        return [self.rm_null_bytes(i).decode() if type(i) == bytes 
+            else i for i in payload]
 
-# Encode all dencoded children of payload
-def encoder(payload) -> list:
-    return [i.encode() if type(i) == str else i for i in payload]
+    # Encode all dencoded children of payload
+    def encoder(self, payload) -> list:
+        return [i.encode() if type(i) == str else i for i in payload]
 
 # Recieve and log TCP packet
 def receive(body, MSS, log, empty) -> set:
@@ -87,6 +88,42 @@ def send(body, addr, payload, log, empty) -> int:
     else: seq += len(data)
     if s_type != Action.DROP: body.sendto(pkt, addr)
     return seq
+
+class Sender:
+    def __init__(self, client, addr, window_info) -> None:
+        self.client = client
+        self.addr = addr
+        self.window_info = window_info
+        self.log = list()
+        self.epoch = time.time()
+
+    def send_empty(self, seq, ack, packet_type) -> int:
+        pkt = struct.pack("!II0sII2s", 
+            *self.encoder([seq, ack, Packet.NONE, *self.window_info, packet_type]))
+        ttime = round((time.time() - self.epoch) * 1000, 3)
+        self.log.append([Action.SEND, ttime, packet_type, seq, ack, len(Packet.NONE)])
+        self.client.sendto(pkt, self.addr)
+        return seq + 1
+
+    def send_data(self, seq, ack, data):
+        pkt = struct.pack(f"!II{self.window_info[0]}sII2s", 
+            *self.encoder([seq, ack, data, *self.window_info, Packet.DATA]))
+        ttime = round((time.time() - self.epoch) * 1000, 3)
+        self.log.append([Action.SEND, ttime, Packet.DATA, seq, ack, len(data)])
+        self.client.sendto(pkt, self.addr)
+        return seq + len(data)
+
+    def get_log(self) -> list:
+        return self.log
+
+
+
+
+
+
+
+
+
 
 # TCP Window class
 class Window:
