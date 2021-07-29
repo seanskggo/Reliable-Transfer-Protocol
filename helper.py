@@ -89,7 +89,7 @@ def send(body, addr, payload, log, empty) -> int:
     if s_type != Action.DROP: body.sendto(pkt, addr)
     return seq
 
-class Sender:
+class Sender(Modifier):
     def __init__(self, client, addr, window_info) -> None:
         self.client = client
         self.addr = addr
