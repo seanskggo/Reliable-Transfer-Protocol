@@ -115,16 +115,18 @@ class Sender(TCP):
         super().__init__(seq, ack, MSS, MWS)
         self.client = client
         self.addr = addr
-        self.random = random.random()
         self.pdrop = None
 
     def send_opening(self, packet_type) -> None:
+        '''Sends initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
 
-    def send(self, data, packet_type) -> None:
-        spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-        self.client.sendto(self.pack(*spec), self.addr)
+    def send(self, data, packet_type, use_PL=True) -> None:
+        if self.PL_module() or not use_PL:
+            spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
+            self.client.sendto(self.pack(*spec), self.addr)
+        else: self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
 
     def receive(self) -> None:
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
@@ -137,7 +139,7 @@ class Sender(TCP):
 
     def PL_module(self) -> bool:
         '''PL Module for dropping segments'''
-        return True if self.random.random() > self.pdrop else False
+        return True if random.random() > self.pdrop else False
 
 # TCP Window class
 class Window:
