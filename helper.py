@@ -98,15 +98,18 @@ class Receiver(TCP):
         self.addr = None
 
     def send(self, data, packet_type) -> None:
+        '''Send segment with data via socket'''
         spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
         self.server.sendto(self.pack(*spec), self.addr)
 
     def receive_opening(self) -> None:
+        '''Receive initial segment without data and establish MSS and MWS'''
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         self.unpack(msg, "!II0sII2s")
         self.addr = addr
 
     def receive(self) -> set:
+        '''Receive segment from socket'''
         msg, _ = self.server.recvfrom(self.MSS + self.HEADER_SIZE)
         return self.unpack(msg, f"!II{self.MSS}sII2s")
 
@@ -118,17 +121,19 @@ class Sender(TCP):
         self.pdrop = None
 
     def send_opening(self, packet_type) -> None:
-        '''Sends initial segment without data since MSS is unknown'''
+        '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
 
     def send(self, data, packet_type, use_PL=True) -> None:
+        '''Send segment with data via socket'''
         if self.PL_module() or not use_PL:
             spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
             self.client.sendto(self.pack(*spec), self.addr)
         else: self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
 
     def receive(self) -> None:
+        '''Receive segment from socket'''
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
         self.unpack(msg, f"!II{self.MSS}sII2s")
 
