@@ -67,10 +67,11 @@ class Modifier:
 
 # Recieve and log TCP packet
 def receive(body, MSS, log, empty) -> set:
+    mod = Modifier()
     msg, addr = body.recvfrom(MSS + HEADER_SIZE)
     ttime = round((time.time() - EPOCH) * 1000, 3)
     serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
-    seq, ack, data, MSS, MWS, p_type = decoder(struct.unpack(serial, msg))
+    seq, ack, data, MSS, MWS, p_type = mod.decoder(struct.unpack(serial, msg))
     log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
     if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
     else: seq += len(data)
@@ -79,9 +80,10 @@ def receive(body, MSS, log, empty) -> set:
 # Send and log TCP packet
 # payload: [seq, ack, data, MSS, send_type, packet_type]
 def send(body, addr, payload, log, empty) -> int:
+    mod = Modifier()
     seq, ack, data, MSS, MWS, s_type, p_type = payload
     serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
-    pkt = struct.pack(serial, *encoder([seq, ack, data, MSS, MWS, p_type]))
+    pkt = struct.pack(serial, *mod.encoder([seq, ack, data, MSS, MWS, p_type]))
     ttime = round((time.time() - EPOCH) * 1000, 3)
     log.append([s_type, ttime, p_type, seq, ack, len(data)])
     if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
@@ -90,28 +92,33 @@ def send(body, addr, payload, log, empty) -> int:
     return seq
 
 class Sender(Modifier):
-    def __init__(self, client, addr, window_info) -> None:
+    def __init__(self, client, addr, window_info, seq, ack) -> None:
         self.client = client
         self.addr = addr
         self.window_info = window_info
         self.log = list()
         self.epoch = time.time()
+        self.seq = seq
+        self.ack = ack
 
-    def send_empty(self, seq, ack, packet_type) -> int:
+    def send_empty(self, packet_type) -> None:
         pkt = struct.pack("!II0sII2s", 
-            *self.encoder([seq, ack, Packet.NONE, *self.window_info, packet_type]))
+            *self.encoder([self.seq, self.ack, Packet.NONE, *self.window_info, packet_type]))
         ttime = round((time.time() - self.epoch) * 1000, 3)
-        self.log.append([Action.SEND, ttime, packet_type, seq, ack, len(Packet.NONE)])
+        self.log.append([Action.SEND, ttime, packet_type, self.seq, self.ack, len(Packet.NONE)])
         self.client.sendto(pkt, self.addr)
-        return seq + 1
+        self.seq += 1
 
-    def send_data(self, seq, ack, data):
+    def send_data(self, data):
         pkt = struct.pack(f"!II{self.window_info[0]}sII2s", 
-            *self.encoder([seq, ack, data, *self.window_info, Packet.DATA]))
+            *self.encoder([self.seq, self.ack, data, *self.window_info, Packet.DATA]))
         ttime = round((time.time() - self.epoch) * 1000, 3)
-        self.log.append([Action.SEND, ttime, Packet.DATA, seq, ack, len(data)])
+        self.log.append([Action.SEND, ttime, Packet.DATA, self.seq, self.ack, len(data)])
         self.client.sendto(pkt, self.addr)
-        return seq + len(data)
+        self.seq += len(data)
+
+    def receive(self) -> None:
+        pass
 
     def get_log(self) -> list:
         return self.log
