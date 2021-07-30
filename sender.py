@@ -54,7 +54,7 @@ client.settimeout(timeout/1000)
 sender = Sender(client, (ip, port), MSS, MWS, seq, ack)
 
 # Opening handshake -> no connection or teardown packets will be dropped
-sender.send_opening()
+sender.send_opening(Packet.SYN)
 sender.receive()
 sender.send(Packet.NONE, Packet.ACK)
 
