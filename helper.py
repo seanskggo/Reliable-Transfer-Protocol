@@ -29,7 +29,6 @@ SENDER_ERROR = \
 PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
 MSS_ERROR = 'Maximum Segment Size must be greater than 0'
 EPOCH = time.time()
-HEADER_SIZE = 18
 
 ##################################################################
 # API
@@ -57,6 +56,7 @@ class TCP:
         self.epoch = time.time()
         self.seq = seq
         self.ack = ack
+        self.HEADER_SIZE = 18
     
     # Remove null bytes from given bytes string
     def rm_null_bytes(self, byte_string) -> bytes:
@@ -103,7 +103,7 @@ class Receiver(TCP):
         self.server.sendto(pkt, self.addr)
 
     def receive_opening(self) -> None:
-        msg, addr = self.server.recvfrom(HEADER_SIZE)
+        msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         ttime = round((time.time() - self.epoch) * 1000, 3)
         seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack("!II0sII2s", msg))
         self.log.append([Action.RECEIVE, ttime, packet_type, seq, ack, len(data)])
@@ -114,7 +114,7 @@ class Receiver(TCP):
         self.ack = seq
 
     def receive(self) -> set:
-        msg, _ = self.server.recvfrom(self.MSS + HEADER_SIZE)
+        msg, _ = self.server.recvfrom(self.MSS + self.HEADER_SIZE)
         ttime = round((time.time() - self.epoch) * 1000, 3)
         seq, ack, data, _, _, packet_type = self.decoder(struct.unpack(f"!II{self.MSS}sII2s", msg))
         self.log.append([Action.RECEIVE, ttime, packet_type, seq, ack, len(data)])
@@ -147,7 +147,7 @@ class Sender(TCP):
         self.increment_seq(Packet.DATA, data)
 
     def receive(self) -> None:
-        msg, _ = self.client.recvfrom(self.MSS + HEADER_SIZE)
+        msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
         ttime = round((time.time() - self.epoch) * 1000, 3)
         seq, ack, data, _, _, packet_type = self.decoder(struct.unpack(f"!II{self.MSS}sII2s", msg))
         self.log.append([Action.RECEIVE, ttime, packet_type, seq, ack, len(data)])
@@ -170,7 +170,7 @@ class Window:
 # Recieve and log TCP packet
 def receive(body, MSS, log, empty) -> set:
     mod = TCP()
-    msg, addr = body.recvfrom(MSS + HEADER_SIZE)
+    msg, addr = body.recvfrom(MSS + 18)
     ttime = round((time.time() - EPOCH) * 1000, 3)
     serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
     seq, ack, data, MSS, MWS, p_type = mod.decoder(struct.unpack(serial, msg))
