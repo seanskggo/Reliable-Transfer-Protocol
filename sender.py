@@ -99,18 +99,3 @@ with open("Sender_log.txt", "w") as logfile:
 # while packet:
 #     check_timeout()
 #     packet = file.read(MSS)
-
-##################################################################
-# Ideas
-##################################################################
-
-# def check_timeout(action):
-#     try: 
-#         if PL_module(pdrop): 
-#             send(client, (ip, port), [0, 0, packet, MSS, action, Packet.DATA], log, False)
-#         receive(client, MSS, log, True)
-#     except: check_timeout(Action.DROP)
-# check_timeout(Action.SEND)
-
-# send(client, (ip, port), [seq, ack, packet, MSS, Action.SEND, Packet.DATA], log, False)
-# ack, seq = receive(client, MSS, log, True)[0][0:2]
