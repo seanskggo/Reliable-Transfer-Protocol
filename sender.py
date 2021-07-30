@@ -45,35 +45,35 @@ if MSS <= 0: exit(MSS_ERROR)
 # Set seed for PL module
 random.seed(seed)
 
-# Create UDP socket client
-client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client.settimeout(timeout/1000)
-log = list()
-
 # Set initial sequence number and ack
 seq, ack = 121, 0
 
+# Create UDP socket client
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client.settimeout(timeout/1000)
+sender = Sender(client, (ip, port), MSS, MWS, seq, ack)
+
 # Opening handshake -> no connection or teardown packets will be dropped
-seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.SYN], log, True)
-ack = receive(client, MSS, log, True)[0][0]
-seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.ACK], log, True)
+sender.send_opening()
+sender.receive()
+sender.send(Packet.NONE, Packet.ACK)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        seq = send(client, (ip, port), [seq, ack, packet, MSS, MWS, Action.SEND, Packet.DATA], log, False)
-        ack = receive(client, MSS, log, True)[0][0]
+        sender.send(packet, Packet.DATA)
+        sender.receive()
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.FIN], log, False)
-    ack = receive(client, MSS, log, True)[0][0]
-    seq = send(client, (ip, port), [seq, ack, Packet.NONE, MSS, MWS, Action.SEND, Packet.ACK], log, True)
+    sender.send(Packet.NONE, Packet.FIN)
+    sender.receive()
+    sender.send(Packet.NONE, Packet.ACK)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
-    for a, b, c, d, e, f in log:
+    for a, b, c, d, e, f in sender.get_log():
         if a == Action.SEND: tot_data += f
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
