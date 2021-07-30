@@ -12,22 +12,10 @@
 # Imports
 ##################################################################
 
+import random
 import time
 import struct
 import collections
-
-##################################################################
-# Constants
-##################################################################
-
-IP = '127.0.0.1'
-RECEIVER_ERROR = \
-    'USAGE: python receiver.py receiver_port FileReceiverd.txt'
-SENDER_ERROR = \
-    'USAGE: python sender.py receiver_host_ip receiver_port ' \
-    + 'FileToSend.txt MWS MSS timeout pdrop seed'
-PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
-MSS_ERROR = 'Maximum Segment Size must be greater than 0'
 
 ##################################################################
 # API
@@ -127,6 +115,8 @@ class Sender(TCP):
         super().__init__(seq, ack, MSS, MWS)
         self.client = client
         self.addr = addr
+        self.random = random.random()
+        self.pdrop = None
 
     def send_opening(self, packet_type) -> None:
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
@@ -139,6 +129,15 @@ class Sender(TCP):
     def receive(self) -> None:
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
         self.unpack(msg, f"!II{self.MSS}sII2s")
+
+    def set_PL_module(self, seed, pdrop):
+        '''Set seed and pdrop in sender instance'''
+        random.seed(seed)
+        self.pdrop = pdrop
+
+    def PL_module(self) -> bool:
+        '''PL Module for dropping segments'''
+        return True if self.random.random() > self.pdrop else False
 
 # TCP Window class
 class Window:

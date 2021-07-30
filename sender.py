@@ -12,16 +12,17 @@
 
 import sys
 import socket
-import random
 from helper import *
 
 ##################################################################
-# Sender Functions
+# Constants
 ##################################################################
 
-# PL Module for dropping segments
-def PL_module(pdrop) -> bool:
-    return True if random.random() > pdrop else False
+SENDER_ERROR = \
+    'USAGE: python sender.py receiver_host_ip receiver_port ' \
+    + 'FileToSend.txt MWS MSS timeout pdrop seed'
+PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
+MSS_ERROR = 'Maximum Segment Size must be greater than 0'
 
 ##################################################################
 # PTP
@@ -42,9 +43,6 @@ except: exit(SENDER_ERROR)
 if not 0 < pdrop < 1: exit(PDROP_ERROR)
 if MSS <= 0: exit(MSS_ERROR)
 
-# Set seed for PL module
-random.seed(seed)
-
 # Set initial sequence number and ack
 seq, ack = 121, 0
 
@@ -52,6 +50,7 @@ seq, ack = 121, 0
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.settimeout(timeout/1000)
 sender = Sender(client, (ip, port), MSS, MWS, seq, ack)
+sender.set_PL_module(seed, pdrop)
 
 # Opening handshake -> no connection or teardown packets will be dropped
 sender.send_opening(Packet.SYN)
