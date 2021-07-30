@@ -28,7 +28,6 @@ SENDER_ERROR = \
     + 'FileToSend.txt MWS MSS timeout pdrop seed'
 PDROP_ERROR = 'Pdrop parameter must be between 0 and 1'
 MSS_ERROR = 'Maximum Segment Size must be greater than 0'
-EPOCH = time.time()
 
 ##################################################################
 # API
@@ -60,43 +59,43 @@ class TCP:
         self.MSS = MSS
         self.MWS = MWS
     
-    # Remove null bytes from given bytes string
     def rm_null_bytes(self, byte_string) -> bytes:
+        '''Remove null bytes from given bytes string'''
         return byte_string.strip(b'\x00')
 
-    # Decode all encoded children of payload
     def decoder(self, payload) -> list:
+        '''Decode all encoded children of payload'''
         return [self.rm_null_bytes(i).decode() if type(i) == bytes 
             else i for i in payload]
 
-    # Encode all dencoded children of payload
     def encoder(self, payload) -> list:
+        '''Encode all dencoded children of payload'''
         return [i.encode() if type(i) == str else i for i in payload]
 
-    # Return increment for sequence/ack number
     def increment(self, packet_type, data) -> int:
+        '''Return increment for sequence/ack number'''
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: 
             return 1
-        else: len(data)
+        else: return len(data)
 
-    # Get time elapsed
     def get_time(self) -> float:
+        '''Get time elapsed'''
         return round((time.time() - self.epoch) * 1000, 3)
 
-    # Get current log
     def get_log(self) -> list:
+        '''Get current log'''
         return self.log
 
-    # Pack and log TCP segment. Returns serialised TCP segment
     def pack(self, data, action, packet_type, serial) -> bytes:
+        '''Pack and log TCP segment. Returns serialised TCP segment'''
         pkt = struct.pack(serial, 
             *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
         self.log.append([action, self.get_time(), packet_type, self.seq, self.ack, len(data)])
         self.seq += self.increment(packet_type, data)
         return pkt
 
-    # Unpack and log TCP segment. Returns a set: (data, packet_type)
     def unpack(self, msg, serial) -> set:
+        '''Unpack and log TCP segment. Returns a set: (data, packet_type)'''
         seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack(serial, msg))
         self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
         self.ack = seq + self.increment(packet_type, data)
@@ -131,11 +130,11 @@ class Sender(TCP):
 
     def send_opening(self, packet_type) -> None:
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
-        self.client.sendto(spec, self.addr)
+        self.client.sendto(self.pack(*spec), self.addr)
 
     def send(self, data, packet_type) -> None:
         spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-        self.client.sendto(spec, self.addr)
+        self.client.sendto(self.pack(*spec), self.addr)
 
     def receive(self) -> None:
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
@@ -149,33 +148,3 @@ class Window:
     
     def send(self):
         pass
-
-##################################################################
-# Past Ideas
-##################################################################
-
-# Recieve and log TCP packet
-def receive(body, MSS, log, empty) -> set:
-    mod = TCP()
-    msg, addr = body.recvfrom(MSS + 18)
-    ttime = round((time.time() - EPOCH) * 1000, 3)
-    serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
-    seq, ack, data, MSS, MWS, p_type = mod.decoder(struct.unpack(serial, msg))
-    log.append([Action.RECEIVE, ttime, p_type, seq, ack, len(data)])
-    if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
-    else: seq += len(data)
-    return ((seq, ack, data, MSS, MWS, p_type), addr)
-
-# Send and log TCP packet
-# payload: [seq, ack, data, MSS, send_type, packet_type]
-def send(body, addr, payload, log, empty) -> int:
-    mod = TCP()
-    seq, ack, data, MSS, MWS, s_type, p_type = payload
-    serial = "!II0sII2s" if empty else f"!II{MSS}sII2s"
-    pkt = struct.pack(serial, *mod.encoder([seq, ack, data, MSS, MWS, p_type]))
-    ttime = round((time.time() - EPOCH) * 1000, 3)
-    log.append([s_type, ttime, p_type, seq, ack, len(data)])
-    if p_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: seq += 1
-    else: seq += len(data)
-    if s_type != Action.DROP: body.sendto(pkt, addr)
-    return seq
