@@ -18,7 +18,7 @@ import struct
 import collections
 
 ##################################################################
-# API
+# Types
 ##################################################################
 
 # Packet types
@@ -36,6 +36,10 @@ class Action:
     SEND = "snd"
     RECEIVE = "rcv"
     DROP = "drop"
+
+##################################################################
+# TCP Class
+##################################################################
 
 class TCP:
     def __init__(self, seq, ack, MSS, MWS) -> None:
@@ -167,7 +171,10 @@ class Sender(TCP):
         '''PL Module for dropping segments'''
         return True if random.random() > self.pdrop else False
 
-# TCP Window class
+##################################################################
+# Sender Window Class
+##################################################################
+
 class SenderWindow:
     def __init__(self, size) -> None:
         self.size = size
@@ -188,6 +195,10 @@ class SenderWindow:
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] for i in self.window])
         else: print(self.window)
+
+##################################################################
+# Receiver Window Class
+##################################################################
 
 class ReceiverWindow:
     def __init__(self, size) -> None:
