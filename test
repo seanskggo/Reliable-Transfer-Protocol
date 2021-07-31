@@ -9,7 +9,7 @@ fi
 echo "Using data file: $1"
 
 python3 receiver.py 8000 FileReceived.txt & P1=$!
-python3 sender.py localhost 8000 $1 256 16 600 0.1 seed1 & P2=$!
+python3 sender.py localhost 8000 $1 256 64 600 0.1 seed1 & P2=$!
 
 echo "Receiver Process: $P1"
 echo "Sender Process: $P2"

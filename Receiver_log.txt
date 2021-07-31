@@ -1,26 +1,16 @@
-rcv   0.923        S      121    0      0     
-snd   0.949        SA     154    0      122   
-rcv   1.169        A      122    0      155   
-rcv   1.421        D      122    16     155   
-snd   1.433        A      155    0      138   
-rcv   1.646        D      138    16     155   
-snd   1.656        A      155    0      154   
-rcv   1.864        D      154    16     155   
-snd   1.876        A      155    0      170   
-rcv   2.107        D      170    16     155   
-snd   2.12         A      155    0      186   
-rcv   2.349        D      186    16     155   
-snd   2.36         A      155    0      202   
-rcv   2.553        D      202    16     155   
-snd   2.563        A      155    0      218   
-rcv   2.813        D      218    4      155   
-snd   2.826        A      155    0      222   
-rcv   3.048        F      222    0      155   
-snd   3.059        FA     155    0      223   
-rcv   3.27         A      223    0      156   
+rcv   0.571        S      121    0      0     
+snd   0.593        SA     154    0      122   
+rcv   0.786        A      122    0      155   
+rcv   1.023        D      122    64     155   
+snd   1.034        A      155    0      186   
+rcv   1.302        D      186    36     155   
+snd   1.31         A      155    0      222   
+rcv   1.549        F      222    0      155   
+snd   1.559        FA     155    0      223   
+rcv   1.748        A      223    0      156   
 
 --------- Log File Statistics ---------
 
 Total Data Received (bytes):     100
-No. Data Segments Received:      7
+No. Data Segments Received:      2
 No. Duplicate Segments:          0

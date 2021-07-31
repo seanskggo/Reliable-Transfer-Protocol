@@ -120,7 +120,7 @@ class Receiver(TCP):
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         self.unpack(msg, "!II0sII2s")
         self.addr = addr
-        self.window = ReceiverWindow(int(self.MWS/self.MSS))
+        # self.window = ReceiverWindow(int(self.MWS/self.MSS))
 
     def receive(self) -> set:
         '''Receive segment from socket'''
@@ -142,7 +142,7 @@ class Sender(TCP):
         '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
-        self.window = SenderWindow(int(self.MWS/self.MSS))
+        # self.window = SenderWindow(int(self.MWS/self.MSS))
 
     ## Use window in front
     def send(self, data, packet_type, use_PL=True) -> set:
@@ -178,19 +178,27 @@ class Sender(TCP):
 class SenderWindow:
     def __init__(self, size) -> None:
         self.size = size
-        self.window = collections.deque([])
-    
+        self.window = collections.deque([None] * size)
+
     def add(self, ack, packet) -> None:
-        if len(self.window) > self.size: raise Exception
-        self.window.append((ack, packet))
-    
+        if all(self.window): raise Exception
+        for i in range(self.size - 1, -1, -1):
+            if self.window[i]: 
+                self.window[i + 1] = (ack, packet)
+                return
+        self.window[0] = (ack, packet)
+
     def ack(self, ack) -> None:
         for i in range(len(self.window)):
             if self.window and self.window[i] and self.window[i][0] == ack: 
                 self.window[i] = None
                 while self.window and not self.window[0]: self.window.popleft()
+                self.window += [None] * (self.size - len(self.window))
                 return
-        print("Duplicate/ack not in window dropped")
+        print("Ack not in window dropped")
+
+    def data_to_resend(self) -> list:
+        return [i for i in self.window if i]
 
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] for i in self.window])
@@ -201,6 +209,13 @@ class SenderWindow:
 ##################################################################
 
 class ReceiverWindow:
-    def __init__(self, size) -> None:
-        self.size = size
-        self.window = collections.deque([])
+    def __init__(self, MSS, seq) -> None:
+        self.MSS = MSS
+        self.seq = seq
+
+    def send_cum_ack(self, ack) -> int:
+        if self.seq == ack: 
+            self.seq += self.MSS
+            return ack
+        else: return self.seq
+            
