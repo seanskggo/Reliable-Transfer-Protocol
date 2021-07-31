@@ -101,15 +101,17 @@ class Receiver(TCP):
 
     def send(self, data, packet_type) -> None:
         '''Send segment with data via socket'''
-        spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-        self.server.sendto(self.pack(*spec), self.addr)
+        seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
+        self.server.sendto(seg, self.addr)
+        # self.window.add(self.ack, seg)
+        # self.window.printWindow(True)
 
     def receive_opening(self) -> None:
         '''Receive initial segment without data and establish MSS and MWS'''
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         self.unpack(msg, "!II0sII2s")
         self.addr = addr
-        self.window = Window(self.MWS/self.MSS)
+        self.window = Window(int(self.MWS/self.MSS))
 
     def receive(self) -> set:
         '''Receive segment from socket'''
@@ -127,19 +129,22 @@ class Sender(TCP):
         '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
-        self.window = Window(self.MWS/self.MSS)
+        self.window = Window(int(self.MWS/self.MSS))
 
     def send(self, data, packet_type, use_PL=True) -> None:
         '''Send segment with data via socket'''
         if self.PL_module() or not use_PL:
-            spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-            self.client.sendto(self.pack(*spec), self.addr)
-        else: self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
+            seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
+            self.client.sendto(seg, self.addr)
+        else: seg = self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
+        # self.window.add(self.seq, seg)
+        # self.window.printWindow(True)
 
     def receive(self) -> None:
         '''Receive segment from socket'''
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
         self.unpack(msg, f"!II{self.MSS}sII2s")
+        # self.window.ack(self.ack)
 
     def set_PL_module(self, seed, pdrop):
         '''Set seed and pdrop in sender instance'''
@@ -161,10 +166,12 @@ class Window:
         self.window.append((ack, packet))
     
     def ack(self, ack) -> None:
-        for i in range(self.size):
-            if self.window[i][0] == ack: self.window[i] = None
-            else: print("Duplicate/ack not in window dropped")
-        while self.window and self.window[0]: self.window.popleft()
+        for i in range(len(self.window)):
+            if self.window and self.window[i] and self.window[i][0] == ack: 
+                self.window[i] = None
+                while self.window and not self.window[0]: self.window.popleft()
+                return
+        print("Duplicate/ack not in window dropped")
 
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] for i in self.window])
