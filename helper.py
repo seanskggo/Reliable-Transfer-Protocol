@@ -92,6 +92,10 @@ class TCP:
         self.MWS = MWS
         return (data, packet_type)
 
+##################################################################
+# Receiver Class
+##################################################################
+
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
         super().__init__(seq, ack, None, None)
@@ -99,10 +103,11 @@ class Receiver(TCP):
         self.addr = None
         self.window = None
 
-    def send(self, data, packet_type) -> None:
+    def send(self, data, packet_type) -> set:
         '''Send segment with data via socket'''
         seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
         self.server.sendto(seg, self.addr)
+        return (self.ack, data)
         # self.window.add(self.ack, seg)
         # self.window.printWindow(True)
 
@@ -111,12 +116,16 @@ class Receiver(TCP):
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         self.unpack(msg, "!II0sII2s")
         self.addr = addr
-        self.window = Window(int(self.MWS/self.MSS))
+        self.window = ReceiverWindow(int(self.MWS/self.MSS))
 
     def receive(self) -> set:
         '''Receive segment from socket'''
         msg, _ = self.server.recvfrom(self.MSS + self.HEADER_SIZE)
         return self.unpack(msg, f"!II{self.MSS}sII2s")
+
+##################################################################
+# Sender Class
+##################################################################
 
 class Sender(TCP):
     def __init__(self, client, addr, MSS, MWS, seq, ack) -> None:
@@ -129,21 +138,24 @@ class Sender(TCP):
         '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
-        self.window = Window(int(self.MWS/self.MSS))
+        self.window = SenderWindow(int(self.MWS/self.MSS))
 
-    def send(self, data, packet_type, use_PL=True) -> None:
+    ## Use window in front
+    def send(self, data, packet_type, use_PL=True) -> set:
         '''Send segment with data via socket'''
         if self.PL_module() or not use_PL:
             seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
             self.client.sendto(seg, self.addr)
         else: seg = self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
+        return (self.seq, data)
         # self.window.add(self.seq, seg)
         # self.window.printWindow(True)
 
-    def receive(self) -> None:
+    def receive(self) -> int:
         '''Receive segment from socket'''
         msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
         self.unpack(msg, f"!II{self.MSS}sII2s")
+        return self.ack
         # self.window.ack(self.ack)
 
     def set_PL_module(self, seed, pdrop):
@@ -156,7 +168,7 @@ class Sender(TCP):
         return True if random.random() > self.pdrop else False
 
 # TCP Window class
-class Window:
+class SenderWindow:
     def __init__(self, size) -> None:
         self.size = size
         self.window = collections.deque([])
@@ -176,3 +188,8 @@ class Window:
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] for i in self.window])
         else: print(self.window)
+
+class ReceiverWindow:
+    def __init__(self, size) -> None:
+        self.size = size
+        self.window = collections.deque([])

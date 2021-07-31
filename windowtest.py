@@ -1,6 +1,6 @@
-from helper import Window
+from helper import SenderWindow
 
-window = Window(4)
+window = SenderWindow(4)
 
 window.add(1, 1)
 window.add(2, 1)
