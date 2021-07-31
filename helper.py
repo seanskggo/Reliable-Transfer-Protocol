@@ -75,13 +75,12 @@ class TCP:
         '''Get current log'''
         return self.log
 
-    def pack(self, data, action, packet_type, serial, window=None) -> bytes:
+    def pack(self, data, action, packet_type, serial) -> bytes:
         '''Pack and log TCP segment. Returns serialised TCP segment'''
         pkt = struct.pack(serial, 
             *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
         self.log.append([action, self.get_time(), packet_type, self.seq, self.ack, len(data)])
         self.seq += self.increment(packet_type, data)
-        if window and packet_type == Packet.DATA: window.add(self.seq, pkt)
         return pkt
 
     def unpack(self, msg, serial) -> set:
@@ -133,10 +132,9 @@ class Sender(TCP):
     def send(self, data, packet_type, use_PL=True) -> None:
         '''Send segment with data via socket'''
         if self.PL_module() or not use_PL:
-            spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s", self.window)
+            spec = (data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
             self.client.sendto(self.pack(*spec), self.addr)
         else: self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
-        self.window.printWindow(True)
 
     def receive(self) -> None:
         '''Receive segment from socket'''
