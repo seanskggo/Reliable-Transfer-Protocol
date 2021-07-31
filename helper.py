@@ -46,6 +46,7 @@ class TCP:
         self.HEADER_SIZE = 18
         self.MSS = MSS
         self.MWS = MWS
+        self.window = None
     
     def rm_null_bytes(self, byte_string) -> bytes:
         '''Remove null bytes from given bytes string'''
@@ -89,14 +90,14 @@ class TCP:
         self.ack = seq + self.increment(packet_type, data)
         self.MSS = MSS
         self.MWS = MWS
-        return (data, packet_type, ack)
+        return (data, packet_type)
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
         super().__init__(seq, ack, None, None)
         self.server = server
         self.addr = None
-        self.window = Window()
+        self.window = None
 
     def send(self, data, packet_type) -> None:
         '''Send segment with data via socket'''
@@ -108,6 +109,7 @@ class Receiver(TCP):
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
         self.unpack(msg, "!II0sII2s")
         self.addr = addr
+        self.window = Window(self.MWS/self.MSS)
 
     def receive(self) -> set:
         '''Receive segment from socket'''
@@ -120,12 +122,12 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
         self.pdrop = None
-        self.window = Window()
 
     def send_opening(self, packet_type) -> None:
         '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
+        self.window = Window(self.MWS/self.MSS)
 
     def send(self, data, packet_type, use_PL=True) -> None:
         '''Send segment with data via socket'''
@@ -154,13 +156,13 @@ class Window:
         self.size = size
         self.window = collections.deque([])
     
-    def add(self, packet) -> None:
+    def add(self, ack, packet) -> None:
         if len(self.window) > self.size: raise Exception
-        self.window.append(packet)
+        self.window.append((ack, packet))
     
     def ack(self, ack) -> None:
         for i in range(self.size):
-            if i == ack: self.window[i] = None
+            if self.window[i][0] == ack: self.window[i] = None
             else: print("Duplicate/ack not in window dropped")
         while self.window and self.window[0]: self.window.popleft()
 
