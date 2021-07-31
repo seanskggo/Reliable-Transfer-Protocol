@@ -89,7 +89,7 @@ class TCP:
         self.ack = seq + self.increment(packet_type, data)
         self.MSS = MSS
         self.MWS = MWS
-        return (data, packet_type)
+        return (data, packet_type, ack)
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
@@ -152,5 +152,15 @@ class Window:
         self.size = size
         self.window = collections.deque([])
     
-    def send(self):
-        pass
+    def add(self, packet) -> None:
+        if len(self.window) > self.size: raise Exception
+        self.window.append(packet)
+    
+    def ack(self, ack) -> None:
+        for i in range(self.size):
+            if i == ack: self.window[i] = None
+            else: print("Duplicate/ack not in window dropped")
+        while self.window and self.window[0]: self.window.popleft()
+
+    def printWindow(self) -> None:
+        print(self.window)

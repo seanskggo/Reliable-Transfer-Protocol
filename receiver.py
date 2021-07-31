@@ -48,7 +48,7 @@ receiver.receive()
 # Open and write to file until teardown
 with open(filename, "w") as file:
     while True:
-        data, packet_type = receiver.receive()
+        data, packet_type, _ = receiver.receive()
         # Handle teardown -> no connection or teardown packets will be dropped
         if packet_type == Packet.FIN: break
         receiver.send(Packet.NONE, Packet.ACK)
