@@ -96,6 +96,7 @@ class Receiver(TCP):
         super().__init__(seq, ack, None, None)
         self.server = server
         self.addr = None
+        self.window = Window()
 
     def send(self, data, packet_type) -> None:
         '''Send segment with data via socket'''
@@ -119,6 +120,7 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
         self.pdrop = None
+        self.window = Window()
 
     def send_opening(self, packet_type) -> None:
         '''Send initial segment without data since MSS is unknown'''

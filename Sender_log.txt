@@ -1,0 +1,28 @@
+snd   0.04         S      121    0      0     
+rcv   1.215        SA     154    0      122   
+snd   1.229        A      122    0      155   
+snd   1.448        D      122    16     155   
+rcv   1.607        A      155    0      138   
+snd   1.618        D      138    16     155   
+rcv   1.779        A      155    0      154   
+snd   1.795        D      154    16     155   
+rcv   1.98         A      155    0      170   
+snd   1.991        D      170    16     155   
+rcv   2.163        A      155    0      186   
+snd   2.175        D      186    16     155   
+rcv   2.336        A      155    0      202   
+snd   2.349        D      202    16     155   
+rcv   2.502        A      155    0      218   
+snd   2.53         D      218    4      155   
+rcv   2.724        A      155    0      222   
+snd   2.753        F      222    0      155   
+rcv   2.941        FA     155    0      223   
+snd   2.954        A      223    0      156   
+
+--------- Log File Statistics ---------
+
+Total Data Transferred (bytes):  100
+No. Data Segments Sent:          7
+No. Packets Dropped:             0
+No. Retransmitted Segments:      0
+No. Duplicate Acknowledgements:  0
