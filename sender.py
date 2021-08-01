@@ -61,9 +61,11 @@ sender.send(Packet.NONE, Packet.ACK, use_PL=False)
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        sender.send(packet, Packet.DATA, use_PL=False)
-        sender.receive()
-        packet = file.read(MSS)
+        for i in range(int(MWS/MSS)): 
+            sender.send(packet, Packet.DATA, use_PL=False)
+            packet = file.read(MSS)
+            if not packet: break
+        for j in range(i + 1): sender.receive()
     # Initiate teardown -> no connection or teardown packets will be dropped
     sender.send(Packet.NONE, Packet.FIN, use_PL=False)
     sender.receive()
