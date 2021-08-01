@@ -41,8 +41,8 @@ receiver = Receiver(server, seq, ack)
 
 # Opening handshake -> no connection or teardown packets will be dropped
 # Received and sets the MSS for the TCP connection
-receiver.receive_opening()
-receiver.send(Packet.NONE, Packet.SYNACK)
+window = receiver.receive_opening()
+receiver.send_ack(Packet.NONE, Packet.SYNACK)
 receiver.receive()
 
 # Open and write to file until teardown
@@ -51,9 +51,9 @@ with open(filename, "w") as file:
         data, packet_type = receiver.receive()
         # Handle teardown -> no connection or teardown packets will be dropped
         if packet_type == Packet.FIN: break
-        receiver.send(Packet.NONE, Packet.ACK)
+        receiver.send_ack(Packet.NONE, Packet.ACK)
         file.write(data)
-    receiver.send(Packet.NONE, Packet.FINACK)
+    receiver.send_ack(Packet.NONE, Packet.FINACK)
     receiver.receive()
 
 # Create log file

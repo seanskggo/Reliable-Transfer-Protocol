@@ -1,16 +1,44 @@
-rcv   0.571        S      121    0      0     
-snd   0.593        SA     154    0      122   
-rcv   0.786        A      122    0      155   
-rcv   1.023        D      122    64     155   
-snd   1.034        A      155    0      186   
-rcv   1.302        D      186    36     155   
-snd   1.31         A      155    0      222   
-rcv   1.549        F      222    0      155   
-snd   1.559        FA     155    0      223   
-rcv   1.748        A      223    0      156   
+rcv   1.231        S      121    0      0     
+snd   1.252        SA     154    0      122   
+rcv   1.572        A      122    0      155   
+rcv   10.148       D      122    64     155   
+snd   10.182       A      155    0      122   
+rcv   10.419       D      186    64     155   
+snd   10.438       A      155    0      186   
+rcv   10.628       D      250    64     155   
+snd   10.645       A      155    0      250   
+rcv   10.827       D      314    64     155   
+snd   10.844       A      155    0      314   
+rcv   11.032       D      378    64     155   
+snd   11.05        A      155    0      378   
+rcv   11.266       D      442    64     155   
+snd   11.284       A      155    0      442   
+rcv   11.494       D      506    64     155   
+snd   11.511       A      155    0      506   
+rcv   11.677       D      570    64     155   
+snd   11.694       A      155    0      570   
+rcv   11.852       D      634    64     155   
+snd   11.868       A      155    0      634   
+rcv   12.021       D      698    64     155   
+snd   12.039       A      155    0      698   
+rcv   12.19        D      762    64     155   
+snd   12.215       A      155    0      762   
+rcv   12.374       D      826    64     155   
+snd   12.391       A      155    0      826   
+rcv   12.552       D      890    64     155   
+snd   12.57        A      155    0      890   
+rcv   12.721       D      954    64     155   
+snd   12.738       A      155    0      954   
+rcv   12.887       D      1018   64     155   
+snd   12.904       A      155    0      1018  
+rcv   13.079       D      1082   40     155   
+snd   13.096       A      155    0      1082  
+rcv   13.26        F      1122   0      155   
+snd   13.277       FA     155    0      1122  
+rcv   13.426       A      1123   0      156   
 
 --------- Log File Statistics ---------
 
-Total Data Received (bytes):     100
-No. Data Segments Received:      2
+Total Data Received (bytes):     1000
+No. Data Segments Received:      16
 No. Duplicate Segments:          0

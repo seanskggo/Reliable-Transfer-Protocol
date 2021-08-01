@@ -79,23 +79,6 @@ class TCP:
         '''Get current log'''
         return self.log
 
-    def pack(self, data, action, packet_type, serial) -> bytes:
-        '''Pack and log TCP segment. Returns serialised TCP segment'''
-        pkt = struct.pack(serial, 
-            *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
-        self.log.append([action, self.get_time(), packet_type, self.seq, self.ack, len(data)])
-        self.seq += self.increment(packet_type, data)
-        return pkt
-
-    def unpack(self, msg, serial) -> set:
-        '''Unpack and log TCP segment. Returns a set: (data, packet_type)'''
-        seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack(serial, msg))
-        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
-        self.ack = seq + self.increment(packet_type, data)
-        self.MSS = MSS
-        self.MWS = MWS
-        return (data, packet_type)
-
 ##################################################################
 # Receiver Class
 ##################################################################
@@ -107,25 +90,35 @@ class Receiver(TCP):
         self.addr = None
         self.window = None
 
-    def send(self, data, packet_type) -> set:
+    def send_ack(self, data, packet_type) -> set:
         '''Send segment with data via socket'''
-        seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-        self.server.sendto(seg, self.addr)
+        pkt = struct.pack(f"!II{self.MSS}sII2s", 
+            *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
+        self.log.append([Action.SEND, self.get_time(), packet_type, self.seq, self.ack, len(data)])
+        self.seq += self.increment(packet_type, data)
+        self.server.sendto(pkt, self.addr)
         return (self.ack, data)
-        # self.window.add(self.ack, seg)
-        # self.window.printWindow(True)
 
     def receive_opening(self) -> None:
         '''Receive initial segment without data and establish MSS and MWS'''
         msg, addr = self.server.recvfrom(self.HEADER_SIZE)
-        self.unpack(msg, "!II0sII2s")
+        seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack("!II0sII2s", msg))
+        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
         self.addr = addr
-        # self.window = ReceiverWindow(int(self.MWS/self.MSS))
+        self.MSS = MSS
+        self.MWS = MWS
+        self.ack = seq + self.increment(packet_type, data)
+        self.window = ReceiverWindow(self.ack)
 
     def receive(self) -> set:
         '''Receive segment from socket'''
         msg, _ = self.server.recvfrom(self.MSS + self.HEADER_SIZE)
-        return self.unpack(msg, f"!II{self.MSS}sII2s")
+        seq, ack, data, _, _, packet_type = self.decoder(struct.unpack(f"!II{self.MSS}sII2s", msg))
+        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
+        self.ack = seq + self.increment(packet_type, data)
+        self.ack = self.window.send_cum_ack(seq, len(data))
+        print(self.ack)
+        return (data, packet_type)
 
 ##################################################################
 # Sender Class
@@ -161,6 +154,23 @@ class Sender(TCP):
         self.unpack(msg, f"!II{self.MSS}sII2s")
         return self.ack
         # self.window.ack(self.ack)
+
+    def pack(self, data, action, packet_type, serial) -> bytes:
+        '''Pack and log TCP segment. Returns serialised TCP segment'''
+        pkt = struct.pack(serial, 
+            *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
+        self.log.append([action, self.get_time(), packet_type, self.seq, self.ack, len(data)])
+        self.seq += self.increment(packet_type, data)
+        return pkt
+
+    def unpack(self, msg, serial) -> set:
+        '''Unpack and log TCP segment. Returns a set: (data, packet_type, seq_of_received)'''
+        seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack(serial, msg))
+        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
+        self.ack = seq + self.increment(packet_type, data)
+        self.MSS = MSS
+        self.MWS = MWS
+        return (data, packet_type, seq)
 
     def set_PL_module(self, seed, pdrop):
         '''Set seed and pdrop in sender instance'''
@@ -209,13 +219,12 @@ class SenderWindow:
 ##################################################################
 
 class ReceiverWindow:
-    def __init__(self, MSS, seq) -> None:
-        self.MSS = MSS
+    def __init__(self, seq) -> None:
         self.seq = seq
 
-    def send_cum_ack(self, ack) -> int:
+    def send_cum_ack(self, ack, length) -> int:
         if self.seq == ack: 
-            self.seq += self.MSS
+            self.seq += length
             return ack
         else: return self.seq
             

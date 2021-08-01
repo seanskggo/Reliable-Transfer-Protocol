@@ -55,3 +55,11 @@ FINISH
 snd   138.76   F   234 0  155
 rcv   140.23   FA  155 0  235
 snd   141.11   A   235 0  156
+
+122     receiver.receive_opening()
+122     receiver.receive()
+    LOOP
+186     receiver.receive()
+222     receiver.receive()
+    LOOP
+222     receiver.receive()
