@@ -54,23 +54,25 @@ sender.set_PL_module(seed, pdrop)
 
 # Opening handshake -> no connection or teardown packets will be dropped
 sender.send_opening(Packet.SYN)
-sender.receive()
-sender.send(Packet.NONE, Packet.ACK, use_PL=False)    
+sender.receive(handshake=True)
+sender.send(Packet.NONE, Packet.ACK, use_PL=False, handshake=True)    
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
+        print("-------")
         for i in range(int(MWS/MSS)): 
-            sender.send(packet, Packet.DATA, use_PL=True)
+            sender.send(packet, Packet.DATA, use_PL=False)
             packet = file.read(MSS)
             if not packet: break
         try: [sender.receive() for _ in range(i + 1)]
         except: print("timeout")
+    print("-------")
     # Initiate teardown -> no connection or teardown packets will be dropped
-    sender.send(Packet.NONE, Packet.FIN, use_PL=False)
-    sender.receive()
-    sender.send(Packet.NONE, Packet.ACK, use_PL=False)
+    sender.send(Packet.NONE, Packet.FIN, use_PL=False, handshake=True)
+    sender.receive(handshake=True)
+    sender.send(Packet.NONE, Packet.ACK, use_PL=False, handshake=True)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:

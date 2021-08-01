@@ -117,7 +117,6 @@ class Receiver(TCP):
         self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
         self.ack = seq + self.increment(packet_type, data)
         self.ack = self.window.send_cum_ack(seq, len(data))
-        print(self.ack)
         return (data, packet_type)
 
 ##################################################################
@@ -135,25 +134,7 @@ class Sender(TCP):
         '''Send initial segment without data since MSS is unknown'''
         spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
         self.client.sendto(self.pack(*spec), self.addr)
-        # self.window = SenderWindow(int(self.MWS/self.MSS))
-
-    ## Use window in front
-    def send(self, data, packet_type, use_PL=True) -> set:
-        '''Send segment with data via socket'''
-        if self.PL_module() or not use_PL:
-            seg = self.pack(data, Action.SEND, packet_type, f"!II{self.MSS}sII2s")
-            self.client.sendto(seg, self.addr)
-        else: seg = self.pack(data, Action.DROP, packet_type, f"!II{self.MSS}sII2s")
-        return (self.seq, data)
-        # self.window.add(self.seq, seg)
-        # self.window.printWindow(True)
-
-    def receive(self) -> int:
-        '''Receive segment from socket'''
-        msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
-        self.unpack(msg, f"!II{self.MSS}sII2s")
-        return self.ack
-        # self.window.ack(self.ack)
+        self.window = SenderWindow(int(self.MWS/self.MSS))
 
     def pack(self, data, action, packet_type, serial) -> bytes:
         '''Pack and log TCP segment. Returns serialised TCP segment'''
@@ -163,14 +144,33 @@ class Sender(TCP):
         self.seq += self.increment(packet_type, data)
         return pkt
 
-    def unpack(self, msg, serial) -> set:
+    ## Use window in front
+    def send(self, data, packet_type, use_PL=True, handshake=False) -> set:
+        '''Send segment with data via socket'''
+        if self.PL_module() or not use_PL: 
+            pkt = struct.pack(f"!II{self.MSS}sII2s", 
+                *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
+            self.log.append([Action.SEND, self.get_time(), packet_type, self.seq, self.ack, len(data)])
+            self.client.sendto(pkt, self.addr)
+        else: self.log.append([Action.DROP, self.get_time(), packet_type, self.seq, self.ack, len(data)])
+        if not handshake: self.window.add(self.seq, data)
+        self.seq += self.increment(packet_type, data)
+        return (self.seq, data)
+
+    def receive(self, handshake=False) -> int:
+        '''Receive segment from socket'''
+        msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
+        ack = self.unpack(msg, f"!II{self.MSS}sII2s")
+        if not handshake: self.window.ack(ack)
+        self.window.printWindow(True)
+        return self.ack
+
+    def unpack(self, msg, serial) -> int:
         '''Unpack and log TCP segment. Returns a set: (data, packet_type, seq_of_received)'''
         seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack(serial, msg))
         self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
         self.ack = seq + self.increment(packet_type, data)
-        self.MSS = MSS
-        self.MWS = MWS
-        return (data, packet_type, seq)
+        return ack
 
     def set_PL_module(self, seed, pdrop):
         '''Set seed and pdrop in sender instance'''
@@ -205,13 +205,13 @@ class SenderWindow:
                 while self.window and not self.window[0]: self.window.popleft()
                 self.window += [None] * (self.size - len(self.window))
                 return
-        print("Ack not in window dropped")
+        print("Ack not in window dropped: " + str(ack))
 
     def data_to_resend(self) -> list:
         return [i for i in self.window if i]
 
     def printWindow(self, ack_only=False) -> None:
-        if ack_only: print([i[0] for i in self.window])
+        if ack_only: print([i[0] if i else None for i in self.window])
         else: print(self.window)
 
 ##################################################################
