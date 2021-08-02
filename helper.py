@@ -63,6 +63,15 @@ class TCP:
     def get_log(self) -> list:
         return self.log
 
+    def update_ack(self, seq, ack, data, packet_type) -> None:
+        # Send and then increase the seq to get the expected return ack which matches this seq
+        # Call this function after you send!
+        if not self.ack: self.ack = seq
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        else: self.ack += len(data)
+        if not ack: return 
+        self.seq = ack
+
 class Sender(TCP):
     def __init__(self, client, seq, ack, addr) -> None:
         super().__init__(seq, ack)
@@ -71,17 +80,18 @@ class Sender(TCP):
 
     def send(self, data, packet_type) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
+        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)\
 
     def receive(self) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        self.update_ack(seq, ack, data, packet_type)
 
-    def drop(self, data, packet_type):
+    def drop(self, data, packet_type) -> None:
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
 
-    def set_PL_module(self, seed, pdrop):
+    def set_PL_module(self, seed, pdrop) -> None:
         random.seed(seed)
         self.pdrop = pdrop
 
@@ -102,6 +112,7 @@ class Receiver(TCP):
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        self.update_ack(seq, ack, data, packet_type)
         return data
 
 ##################################################################
