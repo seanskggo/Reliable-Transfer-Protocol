@@ -70,9 +70,9 @@ sender.send(Packet.NONE, Packet.ACK)
 with open(filename, "r") as file:
     packet = file.read(MSS)
     def send_packet(packet):
-        if sender.PL_module(): sender.send(packet, Packet.DATA)
+        if sender.PL_module(): sender.send(packet, Packet.DATA, add_to_window=True)
         else: sender.drop(packet, Packet.DATA)
-        try: sender.receive()
+        try: sender.receive(ack_window=True)
         except: send_packet(packet)
     while packet:
         send_packet(packet)

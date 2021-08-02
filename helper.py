@@ -71,6 +71,7 @@ class TCP:
         else: self.ack += len(data)
         if not ack: return 
         self.seq = ack
+        # if self.seq + len(data) == ack: self.seq = ack
 
 class Sender(TCP):
     def __init__(self, client, seq, ack, window_length, addr) -> None:
@@ -79,15 +80,18 @@ class Sender(TCP):
         self.addr = addr
         self.window = SenderWindow(window_length)
 
-    def send(self, data, packet_type) -> None:
+    def send(self, data, packet_type, add_to_window=False) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)\
+        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
+        # add expected sequence number to window
+        if add_to_window: self.window.add(self.seq + len(data), data)
 
-    def receive(self) -> None:
+    def receive(self, ack_window=False) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.update_ack(seq, ack, data, packet_type)
+        if ack_window: self.window.ack(ack)
 
     def drop(self, data, packet_type) -> None:
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
@@ -115,6 +119,7 @@ class Receiver(TCP):
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.update_ack(seq, ack, data, packet_type)
+        self.window.send_cum_ack(self.ack, len(data))
         return data
 
 ##################################################################
