@@ -47,17 +47,17 @@ receiver = Receiver(server, seq, ack)
 
 # Opening handshake
 receiver.receive()
-receiver.send(Action.SEND, Packet.NONE, Packet.SYNACK)
+receiver.send(Packet.NONE, Packet.SYNACK)
 receiver.receive()
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
     data = receiver.receive()
     while data:
-        receiver.send(Action.SEND, Packet.NONE, Packet.ACK)
+        receiver.send(Packet.NONE, Packet.ACK)
         file.write(data)
         data = receiver.receive()
-    receiver.send(Action.SEND, Packet.NONE, Packet.FINACK)
+    receiver.send(Packet.NONE, Packet.FINACK)
     receiver.receive()
 
 # Create log file

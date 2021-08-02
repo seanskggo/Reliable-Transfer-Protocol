@@ -56,23 +56,24 @@ client.settimeout(timeout/1000)
 
 # Instantiate sender class
 sender = Sender(client, seq, ack, (ip, port))
+sender.set_PL_module(seed, pdrop)
 
 # Opening handshake
-sender.send(Action.SEND, Packet.NONE, Packet.SYN)
+sender.send(Packet.NONE, Packet.SYN)
 sender.receive()
-sender.send(Action.SEND, Packet.NONE, Packet.ACK)
+sender.send(Packet.NONE, Packet.ACK)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        sender.send(Action.SEND, packet, Packet.DATA)
+        sender.send(packet, Packet.DATA)
         sender.receive()
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    sender.send(Action.SEND, Packet.NONE, Packet.FIN)
+    sender.send(Packet.NONE, Packet.FIN)
     sender.receive()
-    sender.send(Action.SEND, Packet.NONE, Packet.ACK)
+    sender.send(Packet.NONE, Packet.ACK)
     
 # Create log file
 with open("Sender_log.txt", "w") as logfile:

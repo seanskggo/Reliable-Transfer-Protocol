@@ -69,14 +69,24 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
 
-    def send(self, action, data, packet_type) -> None:
+    def send(self, data, packet_type) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-        self.add_log(action, self.seq, self.ack, data, packet_type)
+        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
 
     def receive(self) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+
+    def drop(self, data, packet_type):
+        self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
+
+    def set_PL_module(self, seed, pdrop):
+        random.seed(seed)
+        self.pdrop = pdrop
+
+    def PL_module(self) -> bool:
+        return True if random.random() > self.pdrop else False
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
@@ -84,9 +94,9 @@ class Receiver(TCP):
         self.server = server
         self.addr = None
 
-    def send(self, action, data, packet_type) -> None:
+    def send(self, data, packet_type) -> None:
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-        self.add_log(action, self.seq, self.ack, data, packet_type)
+        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
 
     def receive(self) -> str:
         msg, self.addr = self.server.recvfrom(2048)
