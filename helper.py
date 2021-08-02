@@ -5,7 +5,7 @@
 #
 # >>> Python Verion Used: 3.8.5
 #
-# NOTE: This file is a helper file for sender.py and receiver.py
+# NOTE: This is a helper file for sender.py and receiver.py
 ##################################################################
 
 ##################################################################
@@ -73,10 +73,11 @@ class TCP:
         self.seq = ack
 
 class Sender(TCP):
-    def __init__(self, client, seq, ack, addr) -> None:
+    def __init__(self, client, seq, ack, window_length, addr) -> None:
         super().__init__(seq, ack)
         self.client = client
         self.addr = addr
+        self.window = SenderWindow(window_length)
 
     def send(self, data, packet_type) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
@@ -103,6 +104,7 @@ class Receiver(TCP):
         super().__init__(seq, ack)
         self.server = server
         self.addr = None
+        self.window = ReceiverWindow(seq)
 
     def send(self, data, packet_type) -> None:
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
@@ -120,9 +122,9 @@ class Receiver(TCP):
 ##################################################################
 
 class SenderWindow:
-    def __init__(self, size) -> None:
-        self.size = size
-        self.window = collections.deque([None] * size)
+    def __init__(self, window_length) -> None:
+        self.size = window_length
+        self.window = collections.deque([None] * window_length)
 
     def add(self, ack, packet) -> None:
         if all(self.window): raise Exception

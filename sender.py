@@ -46,6 +46,9 @@ if MSS <= 0: exit(MSS_ERROR)
 # Set initial sequence number and ack
 seq, ack = 121, 0
 
+# Calculate window size
+window_length = int(MWS/MSS)
+
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.settimeout(timeout/1000)
@@ -55,7 +58,7 @@ client.settimeout(timeout/1000)
 ##################################################################
 
 # Instantiate sender class
-sender = Sender(client, seq, ack, (ip, port))
+sender = Sender(client, seq, ack, window_length, (ip, port))
 sender.set_PL_module(seed, pdrop)
 
 # Opening handshake
