@@ -41,23 +41,58 @@ class Action:
 # Functions
 ##################################################################
 
-log = list()
-epoch = time.time()
+class TCP:
+    def __init__(self, seq, ack) -> None:
+        self.log = list()
+        self.epoch = time.time()
+        self.seq = seq
+        self.ack = ack
 
-def get_time() -> float:
-    return round((time.time() - epoch) * 1000, 3)
+    def get_time(self) -> float:
+        return round((time.time() - self.epoch) * 1000, 3)
 
-def encode(seq, ack, data, packet_type) -> bytes:
-    return json.dumps({ "seq": seq, "ack": ack, "data": data, "p_type": packet_type }).encode()
+    def encode(self,seq, ack, data, packet_type) -> bytes:
+        return json.dumps({ "seq": seq, "ack": ack, "data": data, "p_type": packet_type }).encode()
 
-def decode(packet) -> set:
-    return json.loads(packet.decode()).values()
+    def decode(self,packet) -> set:
+        return json.loads(packet.decode()).values()
 
-def add_log(action, seq, ack, data, packet_type) -> None:
-    log.append([action, get_time(), packet_type, seq, ack, len(data)])
+    def add_log(self,action, seq, ack, data, packet_type) -> None:
+        self.log.append([action, self.get_time(), packet_type, seq, ack, len(data)])
 
-def get_log() -> list:
-    return log
+    def get_log(self) -> list:
+        return self.log
+
+class Sender(TCP):
+    def __init__(self, client, seq, ack, addr) -> None:
+        super().__init__(seq, ack)
+        self.client = client
+        self.addr = addr
+
+    def send(self, action, data, packet_type):
+        self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
+        self.add_log(action, self.seq, self.ack, data, packet_type)
+
+    def receive(self):
+        msg, _ = self.client.recvfrom(2048)
+        seq, ack, data, packet_type = self.decode(msg)
+        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+
+class Receiver(TCP):
+    def __init__(self, server, seq, ack) -> None:
+        super().__init__(seq, ack)
+        self.server = server
+        self.addr = None
+
+    def send(self, action, data, packet_type):
+        self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
+        self.add_log(action, self.seq, self.ack, data, packet_type)
+
+    def receive(self):
+        msg, addr = self.client.recvfrom(2048)
+        seq, ack, data, packet_type = self.decode(msg)
+        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        self.addr = addr
 
 ##################################################################
 # Sender Window Class

@@ -42,7 +42,14 @@ server.bind((IP, port))
 # Restart from here
 ##################################################################
 
+# Instantiate receiver class
+receiver = Receiver(server, seq, ack)
+
 # Opening handshake
+receiver.receive()
+sender.send(Action.SEND, Packet.NONE, Packet.SYN)
+sender.send(Action.SEND, Packet.NONE, Packet.ACK)
+
 
 msg, addr = server.recvfrom(2048)
 seq, ack, data, packet_type = decode(msg)
@@ -82,7 +89,7 @@ with open(filename, "w") as file:
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:
     tot_data, num_seg, num_dup = [0] * 3
-    for a, b, c, d, e, f in log:
+    for a, b, c, d, e, f in receiver.get_log():
         if a == Action.RECEIVE: tot_data += f
         if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
