@@ -37,6 +37,12 @@ seq, ack = 154, 0
 # Create UDP socket server
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((IP, port))
+
+##################################################################
+# Restart from here
+##################################################################
+
+
 receiver = Receiver(server, seq, ack)
 
 # Opening handshake -> no connection or teardown packets will be dropped

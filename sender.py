@@ -49,6 +49,15 @@ seq, ack = 121, 0
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.settimeout(timeout/1000)
+
+##################################################################
+# Restart from here
+##################################################################
+
+
+
+
+
 sender = Sender(client, (ip, port), MSS, MWS, seq, ack)
 sender.set_PL_module(seed, pdrop)
 
