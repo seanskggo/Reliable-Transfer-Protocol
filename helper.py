@@ -108,7 +108,7 @@ class Receiver(TCP):
         super().__init__(seq, ack)
         self.server = server
         self.addr = None
-        self.window = ReceiverWindow(seq)
+        self.window = None
 
     def send(self, data, packet_type) -> None:
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
@@ -119,7 +119,7 @@ class Receiver(TCP):
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.update_ack(seq, ack, data, packet_type)
-        self.window.send_cum_ack(self.ack, len(data))
+        if not self.window: self.window = ReceiverWindow(self.ack)
         return data
 
 ##################################################################
