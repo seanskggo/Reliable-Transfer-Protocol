@@ -68,19 +68,28 @@ add_log(Action.SEND, seq, ack, Packet.NONE, Packet.ACK)
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
+
     while packet:
-        print("-------")
-        for i in range(int(MWS/MSS)): 
-            sender.send(packet, Packet.DATA, use_PL=False)
-            packet = file.read(MSS)
-            if not packet: break
-        try: [sender.receive() for _ in range(i + 1)]
-        except: print("timeout")
-    print("-------")
+
+        client.sendto(encode(seq, ack, packet, Packet.DATA), (ip, port))
+        add_log(Action.SEND, seq, ack, packet, Packet.DATA)
+
+        msg, _ = client.recvfrom(2048)
+        seq, ack, data, packet_type = decode(msg)
+        add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        
+        packet = file.read(MSS)
+
     # Initiate teardown -> no connection or teardown packets will be dropped
-    sender.send(Packet.NONE, Packet.FIN, use_PL=False, handshake=True)
-    sender.receive(handshake=True)
-    sender.send(Packet.NONE, Packet.ACK, use_PL=False, handshake=True)
+    client.sendto(encode(seq, ack, Packet.NONE, Packet.FIN), (ip, port))
+    add_log(Action.SEND, seq, ack, Packet.NONE, Packet.FIN)
+    
+    msg, _ = client.recvfrom(2048)
+    seq, ack, data, packet_type = decode(msg)
+    add_log(Action.RECEIVE, seq, ack, data, packet_type)
+
+    client.sendto(encode(seq, ack, Packet.NONE, Packet.ACK), (ip, port))
+    add_log(Action.SEND, seq, ack, Packet.NONE, Packet.ACK)
 
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
