@@ -12,7 +12,7 @@
 
 import sys
 import socket
-from helper import *
+from _helper import *
 
 ##################################################################
 # Constants

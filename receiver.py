@@ -42,30 +42,47 @@ server.bind((IP, port))
 # Restart from here
 ##################################################################
 
+# Opening handshake
 
-receiver = Receiver(server, seq, ack)
+msg, addr = server.recvfrom(2048)
+seq, ack, data, packet_type = decode(msg)
+add_log(Action.RECEIVE, seq, ack, data, packet_type)
 
-# Opening handshake -> no connection or teardown packets will be dropped
-# Received and sets the MSS for the TCP connection
-window = receiver.receive_opening()
-receiver.send_ack(Packet.NONE, Packet.SYNACK)
-receiver.receive()
+server.sendto(encode(seq, ack, Packet.NONE, Packet.SYNACK), addr)
+add_log(Action.SEND, seq, ack, Packet.NONE, Packet.SYNACK)
+
+msg, addr = server.recvfrom(2048)
+seq, ack, data, packet_type = decode(msg)
+add_log(Action.RECEIVE, seq, ack, data, packet_type)
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
     while True:
-        data, packet_type = receiver.receive()
+
+        # Receive packets until FIN
+        msg, addr = server.recvfrom(2048)
+        seq, ack, data, packet_type = decode(msg)
+        add_log(Action.RECEIVE, seq, ack, data, packet_type)
+
         # Handle teardown -> no connection or teardown packets will be dropped
         if packet_type == Packet.FIN: break
-        receiver.send_ack(Packet.NONE, Packet.ACK)
+
+        server.sendto(encode(seq, ack, Packet.NONE, Packet.ACK), addr)
+        add_log(Action.SEND, seq, ack, Packet.NONE, Packet.ACK)
+        
         file.write(data)
-    receiver.send_ack(Packet.NONE, Packet.FINACK)
-    receiver.receive()
+
+    server.sendto(encode(seq, ack, Packet.NONE, Packet.FINACK), addr)
+    add_log(Action.SEND, seq, ack, Packet.NONE, Packet.FINACK) 
+
+    msg, addr = server.recvfrom(2048)
+    seq, ack, data, packet_type = decode(msg)
+    add_log(Action.RECEIVE, seq, ack, data, packet_type)
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:
     tot_data, num_seg, num_dup = [0] * 3
-    for a, b, c, d, e, f in receiver.get_log():
+    for a, b, c, d, e, f in log:
         if a == Action.RECEIVE: tot_data += f
         if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")

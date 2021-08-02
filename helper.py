@@ -14,8 +14,8 @@
 
 import random
 import time
-import struct
 import collections
+import json
 
 ##################################################################
 # Types
@@ -38,148 +38,26 @@ class Action:
     DROP = "drop"
 
 ##################################################################
-# TCP Class
+# Functions
 ##################################################################
 
-class TCP:
-    def __init__(self, seq, ack, MSS, MWS) -> None:
-        self.log = list()
-        self.epoch = time.time()
-        self.seq = seq
-        self.ack = ack
-        self.HEADER_SIZE = 18
-        self.MSS = MSS
-        self.MWS = MWS
-        self.window = None
-    
-    def rm_null_bytes(self, byte_string) -> bytes:
-        '''Remove null bytes from given bytes string'''
-        return byte_string.strip(b'\x00')
+log = list()
+epoch = time.time()
 
-    def decoder(self, payload) -> list:
-        '''Decode all encoded children of payload'''
-        return [self.rm_null_bytes(i).decode() if type(i) == bytes 
-            else i for i in payload]
+def get_time() -> float:
+    return round((time.time() - epoch) * 1000, 3)
 
-    def encoder(self, payload) -> list:
-        '''Encode all dencoded children of payload'''
-        return [i.encode() if type(i) == str else i for i in payload]
+def encode(seq, ack, data, packet_type) -> bytes:
+    return json.dumps({ "seq": seq, "ack": ack, "data": data, "p_type": packet_type }).encode()
 
-    def increment(self, packet_type, data) -> int:
-        '''Return increment for sequence/ack number'''
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: 
-            return 1
-        else: return len(data)
+def decode(packet) -> set:
+    return json.loads(packet.decode()).values()
 
-    def get_time(self) -> float:
-        '''Get time elapsed'''
-        return round((time.time() - self.epoch) * 1000, 3)
+def add_log(action, seq, ack, data, packet_type) -> None:
+    log.append([action, get_time(), packet_type, seq, ack, len(data)])
 
-    def get_log(self) -> list:
-        '''Get current log'''
-        return self.log
-
-##################################################################
-# Receiver Class
-##################################################################
-
-class Receiver(TCP):
-    def __init__(self, server, seq, ack) -> None:
-        super().__init__(seq, ack, None, None)
-        self.server = server
-        self.addr = None
-        self.window = None
-
-    def send_ack(self, data, packet_type) -> set:
-        '''Send segment with data via socket'''
-        pkt = struct.pack(f"!II{self.MSS}sII2s", 
-            *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
-        self.log.append([Action.SEND, self.get_time(), packet_type, self.seq, self.ack, len(data)])
-        self.seq += self.increment(packet_type, data)
-        self.server.sendto(pkt, self.addr)
-        return (self.ack, data)
-
-    def receive_opening(self) -> None:
-        '''Receive initial segment without data and establish MSS and MWS'''
-        msg, addr = self.server.recvfrom(self.HEADER_SIZE)
-        seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack("!II0sII2s", msg))
-        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
-        self.addr = addr
-        self.MSS = MSS
-        self.MWS = MWS
-        self.ack = seq + self.increment(packet_type, data)
-        self.window = ReceiverWindow(self.ack)
-
-    def receive(self) -> set:
-        '''Receive segment from socket'''
-        msg, _ = self.server.recvfrom(self.MSS + self.HEADER_SIZE)
-        seq, ack, data, _, _, packet_type = self.decoder(struct.unpack(f"!II{self.MSS}sII2s", msg))
-        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
-        self.ack = seq + self.increment(packet_type, data)
-        self.ack = self.window.send_cum_ack(seq, len(data))
-        return (data, packet_type)
-
-##################################################################
-# Sender Class
-##################################################################
-
-class Sender(TCP):
-    def __init__(self, client, addr, MSS, MWS, seq, ack) -> None:
-        super().__init__(seq, ack, MSS, MWS)
-        self.client = client
-        self.addr = addr
-        self.pdrop = None
-
-    def send_opening(self, packet_type) -> None:
-        '''Send initial segment without data since MSS is unknown'''
-        spec = (Packet.NONE, Action.SEND, packet_type, "!II0sII2s")
-        self.client.sendto(self.pack(*spec), self.addr)
-        self.window = SenderWindow(int(self.MWS/self.MSS))
-
-    def pack(self, data, action, packet_type, serial) -> bytes:
-        '''Pack and log TCP segment. Returns serialised TCP segment'''
-        pkt = struct.pack(serial, 
-            *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
-        self.log.append([action, self.get_time(), packet_type, self.seq, self.ack, len(data)])
-        self.seq += self.increment(packet_type, data)
-        return pkt
-
-    ## Use window in front
-    def send(self, data, packet_type, use_PL=True, handshake=False) -> set:
-        '''Send segment with data via socket'''
-        if self.PL_module() or not use_PL: 
-            pkt = struct.pack(f"!II{self.MSS}sII2s", 
-                *self.encoder([self.seq, self.ack, data, self.MSS, self.MWS, packet_type]))
-            self.log.append([Action.SEND, self.get_time(), packet_type, self.seq, self.ack, len(data)])
-            self.client.sendto(pkt, self.addr)
-        else: self.log.append([Action.DROP, self.get_time(), packet_type, self.seq, self.ack, len(data)])
-        if not handshake: self.window.add(self.seq, data)
-        self.seq += self.increment(packet_type, data)
-        return (self.seq, data)
-
-    def receive(self, handshake=False) -> int:
-        '''Receive segment from socket'''
-        msg, _ = self.client.recvfrom(self.MSS + self.HEADER_SIZE)
-        ack = self.unpack(msg, f"!II{self.MSS}sII2s")
-        if not handshake: self.window.ack(ack)
-        self.window.printWindow(True)
-        return self.ack
-
-    def unpack(self, msg, serial) -> int:
-        '''Unpack and log TCP segment. Returns a set: (data, packet_type, seq_of_received)'''
-        seq, ack, data, MSS, MWS, packet_type = self.decoder(struct.unpack(serial, msg))
-        self.log.append([Action.RECEIVE, self.get_time(), packet_type, seq, ack, len(data)])
-        self.ack = seq + self.increment(packet_type, data)
-        return ack
-
-    def set_PL_module(self, seed, pdrop):
-        '''Set seed and pdrop in sender instance'''
-        random.seed(seed)
-        self.pdrop = pdrop
-
-    def PL_module(self) -> bool:
-        '''PL Module for dropping segments'''
-        return True if random.random() > self.pdrop else False
+def get_log() -> list:
+    return log
 
 ##################################################################
 # Sender Window Class

@@ -54,17 +54,16 @@ client.settimeout(timeout/1000)
 # Restart from here
 ##################################################################
 
+# Opening handshake
+client.sendto(encode(seq, ack, Packet.NONE, Packet.SYN), (ip, port))
+add_log(Action.SEND, seq, ack, Packet.NONE, Packet.SYN)
 
+msg, _ = client.recvfrom(2048)
+seq, ack, data, packet_type = decode(msg)
+add_log(Action.RECEIVE, seq, ack, data, packet_type)
 
-
-
-sender = Sender(client, (ip, port), MSS, MWS, seq, ack)
-sender.set_PL_module(seed, pdrop)
-
-# Opening handshake -> no connection or teardown packets will be dropped
-sender.send_opening(Packet.SYN)
-sender.receive(handshake=True)
-sender.send(Packet.NONE, Packet.ACK, use_PL=False, handshake=True)    
+client.sendto(encode(seq, ack, Packet.NONE, Packet.ACK), (ip, port))
+add_log(Action.SEND, seq, ack, Packet.NONE, Packet.ACK)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
@@ -86,7 +85,7 @@ with open(filename, "r") as file:
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
-    for a, b, c, d, e, f in sender.get_log():
+    for a, b, c, d, e, f in get_log():
         if a == Action.SEND: tot_data += f
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
@@ -96,17 +95,3 @@ with open("Sender_log.txt", "w") as logfile:
     logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
     logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n")
-
-##################################################################
-# Important Ideas
-##################################################################
-
-# def send_packet():
-#     sender.send(packet, Packet.DATA)
-#     sender.receive()
-# def check_timeout():
-#     try: send_packet()
-#     except: check_timeout()
-# while packet:
-#     check_timeout()
-#     packet = file.read(MSS)

@@ -1,16 +1,9 @@
-rcv   0.614        S      121    0      0     
-snd   0.637        SA     154    0      122   
-rcv   0.932        A      122    0      155   
-rcv   1.2          D      122    64     155   
-snd   1.215        A      155    0      122   
-rcv   1.365        D      186    36     155   
-snd   1.375        A      155    0      186   
-rcv   1.652        F      222    0      155   
-snd   1.662        FA     155    0      222   
-rcv   1.904        A      223    0      156   
+rcv   0.9          S      121    0      0     
+snd   0.991        SA     121    0      0     
+rcv   1.176        A      121    0      0     
 
 --------- Log File Statistics ---------
 
-Total Data Received (bytes):     100
-No. Data Segments Received:      2
+Total Data Received (bytes):     0
+No. Data Segments Received:      0
 No. Duplicate Segments:          0
