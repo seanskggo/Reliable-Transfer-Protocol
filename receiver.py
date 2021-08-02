@@ -47,44 +47,18 @@ receiver = Receiver(server, seq, ack)
 
 # Opening handshake
 receiver.receive()
-sender.send(Action.SEND, Packet.NONE, Packet.SYN)
-sender.send(Action.SEND, Packet.NONE, Packet.ACK)
-
-
-msg, addr = server.recvfrom(2048)
-seq, ack, data, packet_type = decode(msg)
-add_log(Action.RECEIVE, seq, ack, data, packet_type)
-
-server.sendto(encode(seq, ack, Packet.NONE, Packet.SYNACK), addr)
-add_log(Action.SEND, seq, ack, Packet.NONE, Packet.SYNACK)
-
-msg, addr = server.recvfrom(2048)
-seq, ack, data, packet_type = decode(msg)
-add_log(Action.RECEIVE, seq, ack, data, packet_type)
+receiver.send(Action.SEND, Packet.NONE, Packet.SYNACK)
+receiver.receive()
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
-    while True:
-
-        # Receive packets until FIN
-        msg, addr = server.recvfrom(2048)
-        seq, ack, data, packet_type = decode(msg)
-        add_log(Action.RECEIVE, seq, ack, data, packet_type)
-
-        # Handle teardown -> no connection or teardown packets will be dropped
-        if packet_type == Packet.FIN: break
-
-        server.sendto(encode(seq, ack, Packet.NONE, Packet.ACK), addr)
-        add_log(Action.SEND, seq, ack, Packet.NONE, Packet.ACK)
-        
+    data_left, data = receiver.receive()
+    while data_left:
+        receiver.send(Action.SEND, Packet.NONE, Packet.ACK)
         file.write(data)
-
-    server.sendto(encode(seq, ack, Packet.NONE, Packet.FINACK), addr)
-    add_log(Action.SEND, seq, ack, Packet.NONE, Packet.FINACK) 
-
-    msg, addr = server.recvfrom(2048)
-    seq, ack, data, packet_type = decode(msg)
-    add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        data_left, data = receiver.receive()
+    receiver.send(Action.SEND, Packet.NONE, Packet.FINACK)
+    receiver.receive()
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:

@@ -69,11 +69,11 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
 
-    def send(self, action, data, packet_type):
+    def send(self, action, data, packet_type) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(action, self.seq, self.ack, data, packet_type)
 
-    def receive(self):
+    def receive(self) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
@@ -84,15 +84,15 @@ class Receiver(TCP):
         self.server = server
         self.addr = None
 
-    def send(self, action, data, packet_type):
-        self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
+    def send(self, action, data, packet_type) -> None:
+        self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(action, self.seq, self.ack, data, packet_type)
 
-    def receive(self):
-        msg, addr = self.client.recvfrom(2048)
+    def receive(self) -> bool:
+        msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        self.addr = addr
+        return (not packet_type == Packet.FIN, data)
 
 ##################################################################
 # Sender Window Class
