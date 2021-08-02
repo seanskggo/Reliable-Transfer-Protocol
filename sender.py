@@ -66,9 +66,13 @@ sender.send(Packet.NONE, Packet.ACK)
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
+    def send_packet(packet):
+        if sender.PL_module(): sender.send(packet, Packet.DATA)
+        else: sender.drop(packet, Packet.DATA)
+        try: sender.receive()
+        except: send_packet(packet)
     while packet:
-        sender.send(packet, Packet.DATA)
-        sender.receive()
+        send_packet(packet)
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
     sender.send(Packet.NONE, Packet.FIN)
