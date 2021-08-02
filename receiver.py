@@ -52,11 +52,11 @@ receiver.receive()
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
-    data_left, data = receiver.receive()
-    while data_left:
+    data = receiver.receive()
+    while data:
         receiver.send(Action.SEND, Packet.NONE, Packet.ACK)
         file.write(data)
-        data_left, data = receiver.receive()
+        data = receiver.receive()
     receiver.send(Action.SEND, Packet.NONE, Packet.FINACK)
     receiver.receive()
 

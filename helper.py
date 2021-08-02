@@ -88,11 +88,11 @@ class Receiver(TCP):
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(action, self.seq, self.ack, data, packet_type)
 
-    def receive(self) -> bool:
+    def receive(self) -> str:
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        return (not packet_type == Packet.FIN, data)
+        return data
 
 ##################################################################
 # Sender Window Class
