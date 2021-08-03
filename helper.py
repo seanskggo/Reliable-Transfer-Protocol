@@ -70,18 +70,18 @@ class Sender(TCP):
         self.addr = addr
         self.window = SenderWindow(window_length)
 
-    def send(self, data, packet_type, add_to_window=False) -> None:
+    def send(self, data, packet_type, opening=False) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
         # add expected sequence number to window
-        if add_to_window: self.window.add(self.seq + len(data), data)
+        if not opening: self.window.add(self.seq + len(data), data)
 
-    def receive(self, ack_window=False) -> None:
+    def receive(self, opening=False) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.update_ack(seq, ack, data, packet_type)
-        if ack_window: self.window.ack(ack)
+        if not opening: self.window.ack(ack)
 
     def drop(self, data, packet_type) -> None:
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
@@ -94,15 +94,16 @@ class Sender(TCP):
         return True if random.random() > self.pdrop else False
 
     def update_ack(self, seq, ack, data, packet_type) -> None:
+        # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
+        # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
+        if ack and self.seq < ack: self.seq = ack
+        else: return
         # If current ack is 0 i.e. opening handshake, then make incoming
         # sequence number the new ack number
         if not self.ack: self.ack = seq
         # Update the ack number
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
-        # If in coming ack from reciever is 0 i.e. from initial opening handshake, ignore it
-        if ack: self.seq = ack
-        # if self.seq + len(data) == ack: self.seq = ack
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
@@ -112,15 +113,24 @@ class Receiver(TCP):
         self.window = None
 
     def send(self, data, packet_type) -> None:
+        # Send cumulative ack
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
 
     def receive(self) -> str:
+        # Receive and log packet data
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        # update window accordingly
+        
+        
+        
+        
         self.update_ack(seq, ack, data, packet_type)
         if not self.window: self.window = ReceiverWindow(self.ack)
+        print(seq)
+        # print(self.window.send_cum_ack(ack, len(data)))
         return data
 
     def update_ack(self, seq, ack, data, packet_type) -> None:
@@ -129,9 +139,7 @@ class Receiver(TCP):
         if not self.ack: self.ack = seq
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
-        if not ack: return 
-        self.seq = ack
-        # if self.seq + len(data) == ack: self.seq = ack
+        if ack: self.seq = ack
 
 ##################################################################
 # Sender Window Class

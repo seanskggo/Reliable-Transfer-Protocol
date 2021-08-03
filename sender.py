@@ -62,17 +62,17 @@ sender = Sender(client, seq, ack, window_length, (ip, port))
 sender.set_PL_module(seed, pdrop)
 
 # Opening handshake
-sender.send(Packet.NONE, Packet.SYN)
-sender.receive()
-sender.send(Packet.NONE, Packet.ACK)
+sender.send(Packet.NONE, Packet.SYN, opening=True)
+sender.receive(opening=True)
+sender.send(Packet.NONE, Packet.ACK, opening=True)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     def send_packet(packet):
-        if sender.PL_module(): sender.send(packet, Packet.DATA, add_to_window=True)
+        if sender.PL_module(): sender.send(packet, Packet.DATA)
         else: sender.drop(packet, Packet.DATA)
-        try: sender.receive(ack_window=True)
+        try: sender.receive()
         except: send_packet(packet)
     while packet:
         send_packet(packet)
