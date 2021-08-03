@@ -74,7 +74,10 @@ class Sender(TCP):
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
         # add expected sequence number to window
-        if not handshake: self.window.add(self.seq + len(data), data)
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        else: self.seq += len(data)
+        if not handshake: 
+            self.window.add(self.seq, data)
 
     def receive(self, handshake=False) -> None:
         msg, _ = self.client.recvfrom(2048)
@@ -100,9 +103,9 @@ class Sender(TCP):
         # Update the ack number
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
-        # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
-        # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
-        if ack: self.seq = ack
+        # # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
+        # # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
+        # if ack: self.seq = ack
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
@@ -116,6 +119,8 @@ class Receiver(TCP):
         seq_to_send = self.ack if handshake else self.window.get_cum_ack()
         self.server.sendto(self.encode(self.seq, seq_to_send, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, seq_to_send, data, packet_type)
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        else: self.seq += len(data)
 
     def receive(self, handshake=False) -> str:
         # Receive and log packet data
