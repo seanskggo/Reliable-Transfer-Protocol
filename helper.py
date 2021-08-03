@@ -76,8 +76,15 @@ class Sender(TCP):
         # add expected sequence number to window
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
         else: self.seq += len(data)
-        if not handshake: 
-            self.window.add(self.seq, self.ack, data)
+        if not handshake: self.window.add(self.seq, self.ack, data)
+
+    # def resend(self, data, packet_type, handshake=False) -> None:
+    #     self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
+    #     self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
+    #     # add expected sequence number to window
+    #     if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+    #     else: self.seq += len(data)
+    #     if not handshake: self.window.add(self.seq, self.ack, data)
 
     def receive(self, handshake=False) -> None:
         msg, _ = self.client.recvfrom(2048)
@@ -167,7 +174,10 @@ class SenderWindow:
         print("Ack not in window dropped: " + str(ack))
 
     def data_to_resend(self) -> list:
-        return [i for i in self.window if i]
+        def modify(pkt):
+            a, b, c = pkt
+            return (a - len(c), b, c)
+        return [modify(i) for i in self.window if i]
 
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] if i else None for i in self.window])
