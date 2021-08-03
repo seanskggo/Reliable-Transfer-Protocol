@@ -78,13 +78,9 @@ class Sender(TCP):
         else: self.seq += len(data)
         if not handshake: self.window.add(self.seq, self.ack, data)
 
-    # def resend(self, data, packet_type, handshake=False) -> None:
-    #     self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-    #     self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
-    #     # add expected sequence number to window
-    #     if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
-    #     else: self.seq += len(data)
-    #     if not handshake: self.window.add(self.seq, self.ack, data)
+    def resend(self, seq, ack, data, packet_type) -> None:
+        self.client.sendto(self.encode(seq, ack, data, packet_type), self.addr)
+        self.add_log(Action.SEND, seq, ack, data, packet_type)
 
     def receive(self, handshake=False) -> None:
         msg, _ = self.client.recvfrom(2048)

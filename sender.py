@@ -72,15 +72,19 @@ with open(filename, "r") as file:
     while packet:
         print("-----------------")
         for ln in range(window_length):
-            sender.window.printWindow(True)
             if sender.PL_module(): sender.send(packet, Packet.DATA)
             else: sender.drop(packet, Packet.DATA)
             packet = file.read(MSS)
             if not packet: break
-        try: [sender.receive() for _ in range(ln + 1)]
-        except: 
+            sender.window.printWindow(True)
+        fine = True
+        for _ in range(ln + 1):
+            try: sender.receive()
+            except: fine = False
+        if not fine:
             print("packets dropped")
-            for i in sender.window.data_to_resend(): print(i)
+            for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
+            [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
         print("-----------------")
     # Initiate teardown -> no connection or teardown packets will be dropped
     sender.send(Packet.NONE, Packet.FIN, handshake=True)
