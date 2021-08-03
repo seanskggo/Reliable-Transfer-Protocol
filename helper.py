@@ -88,6 +88,10 @@ class Sender(TCP):
 
     def drop(self, data, packet_type) -> None:
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
+        # add expected sequence number to window
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        else: self.seq += len(data)
+        self.window.add(self.seq, data)
 
     def set_PL_module(self, seed, pdrop) -> None:
         random.seed(seed)
