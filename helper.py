@@ -9,6 +9,20 @@
 ##################################################################
 
 ##################################################################
+# COMMENT SECTION - GET RID OF LATER
+#
+# Problem 1: When a window acks and frees a space, no new segment
+#            is sent immediately e.g. [1018, 1082, 1122, None] 
+#            should be [1018, 1082, 1122, "new segment number"]
+# Problem 2: When there are two timeouts per window, the timeout
+#            is twice as long: e.g. two timeouts of 600ms:
+#            rcv   3.531        A      155    0      634   
+#            snd   1205.078     D      634    64     155  
+# Problem 3: Currently, the UDP buffer size is 2048 -> make it 
+#            dynamic
+##################################################################
+
+##################################################################
 # Imports
 ##################################################################
 
@@ -82,7 +96,7 @@ class Sender(TCP):
         '''Encode data and add to current window. Logs and sends the packet'''
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
-        self.update_seq(data, packet_type)
+        self.__update_seq(data, packet_type)
         if not handshake: self.window.add(self.seq, self.ack, data)
 
     def resend(self, seq, ack, data, packet_type) -> None:
@@ -95,13 +109,13 @@ class Sender(TCP):
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        self.update_ack(seq, data, packet_type)
+        self.__update_ack(seq, data, packet_type)
         if not handshake: self.window.ack(ack)
 
     def drop(self, data, packet_type) -> None:
         '''Log data with current sequence and ack number. Drops the packet'''
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
-        self.update_seq(data, packet_type)
+        self.__update_seq(data, packet_type)
         self.window.add(self.seq, self.ack, data)
 
     def set_PL_module(self, seed, pdrop) -> None:
@@ -113,13 +127,13 @@ class Sender(TCP):
         '''Activate the PL module'''
         return True if random.random() > self.pdrop else False
 
-    def update_ack(self, seq, data, packet_type) -> None:
+    def __update_ack(self, seq, data, packet_type) -> None:
         '''Given a receiver's sequence number, update the sender's ack number '''
         if not self.ack: self.ack = seq
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
 
-    def update_seq(self, data, packet_type) -> None:
+    def __update_seq(self, data, packet_type) -> None:
         '''Update sequence number to the next expected sequence number'''
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
         else: self.seq += len(data)
@@ -134,10 +148,10 @@ class Receiver(TCP):
         self.window = None
 
     def send(self, data, packet_type, handshake=False) -> None:
-        # Send cumulative ack
-        seq_to_send = self.ack if handshake else self.window.get_cum_ack()
-        self.server.sendto(self.encode(self.seq, seq_to_send, data, packet_type), self.addr)
-        self.add_log(Action.SEND, self.seq, seq_to_send, data, packet_type)
+        '''Encode data with current cumulative ack. Logs and sends the packet'''
+        cum_ack = self.ack if handshake else self.window.get_cum_ack()
+        self.server.sendto(self.encode(self.seq, cum_ack, data, packet_type), self.addr)
+        self.add_log(Action.SEND, self.seq, cum_ack, data, packet_type)
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
         else: self.seq += len(data)
 
@@ -183,6 +197,7 @@ class Receiver(TCP):
 class SenderWindow:
 
     def __init__(self, window_length) -> None:
+        '''Initialise Sender Window instance'''
         self.size = window_length
         self.window = collections.deque([None] * window_length)
 
@@ -221,19 +236,24 @@ class SenderWindow:
 ##################################################################
 
 class ReceiverWindow:
+
     def __init__(self, seq) -> None:
+        '''Initialise Receiver Window instance'''
         self.seq = seq
         self.buffer = set()
 
     def update_cum_ack(self, ack, length) -> bool:
+        '''Update current cumulative ack'''
         outcome = self.seq == ack
         self.seq = self.seq + length if outcome else self.seq
         return outcome
 
     def get_cum_ack(self):
+        '''Get current cumulative ack'''
         return self.seq
 
     def add_to_buffer(self, seq, data):
+        '''Add sequence number and data to buffer'''
         self.buffer.add((seq, data))
 
     def check_buffer(self, seq):
