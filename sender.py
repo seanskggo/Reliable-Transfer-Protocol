@@ -83,6 +83,7 @@ with open(filename, "r") as file:
             except: fine = False
         if not fine:
             print("packets dropped")
+            print( sender.window.data_to_resend())
             for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
             [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
         print("-----------------")
@@ -96,7 +97,10 @@ with open("Sender_log.txt", "w") as logfile:
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
     for a, b, c, d, e, f in sender.get_log():
         if a == Action.SEND: tot_data += f
+        elif a == Action.DROP: tot_data -= f
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
+        elif a == Action.DROP: num_seg -= 1
+        if a == Action.DROP: drp_pkt += 1
         logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")

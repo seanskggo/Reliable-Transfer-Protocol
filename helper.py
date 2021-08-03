@@ -64,6 +64,11 @@ class TCP:
         return self.log
 
 class Sender(TCP):
+
+    # DESCRIPTION
+    # Sends packet then increases the seq number independently then adds to window
+    # Received packets are acked and removed -> else resend
+
     def __init__(self, client, seq, ack, window_length, addr) -> None:
         super().__init__(seq, ack)
         self.client = client
@@ -115,6 +120,11 @@ class Sender(TCP):
         # if ack: self.seq = ack
 
 class Receiver(TCP):
+
+    # DESCRIPTION
+    # Receives packets and checks if they are in order using sequence numbers. Otherwise, 
+    # store in buffer and then transmit cumulative ack
+
     def __init__(self, server, seq, ack) -> None:
         super().__init__(seq, ack)
         self.server = server
@@ -133,13 +143,36 @@ class Receiver(TCP):
         # Receive and log packet data
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
-        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        # update window accordingly
-        if not (handshake or packet_type == Packet.FIN):
+        if handshake:
+            self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+            if not self.ack: self.ack = seq
+            if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        else:
             if not self.window: self.window = ReceiverWindow(seq)
-            if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
-        if not self.ack: self.ack = seq
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+            if self.ack != seq:
+                print("out of order packet will be buffered")
+                self.window.add_to_buffer(seq, data)
+                if not packet_type == Packet.FIN:
+                    if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
+                if not self.ack: self.ack = seq
+                if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+                return "|BUFFERED|"
+            elif self.window.check_buffer(seq): 
+                print("duplicate packet dropped at receiver " + str(seq))
+                if not packet_type == Packet.FIN:
+                    if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
+                if not self.ack: self.ack = seq
+                if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+                return self.window.get_buffered_data(seq)
+            self.window.add_to_buffer(seq, data)
+            self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+            # update window accordingly
+            if not packet_type == Packet.FIN:
+                if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
+            if not self.ack: self.ack = seq
+            if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+            print("packet received at receiver " + str(seq))
+        # print(self.seq, data)
         return data
 
 ##################################################################
@@ -165,9 +198,11 @@ class SenderWindow:
                 self.window[i] = None
                 while self.window and not self.window[0]: self.window.popleft()
                 self.window += [None] * (self.size - len(self.window))
-                print("Ack received: " + str(ack))
+                print("Sender: Ack received: " + str(ack))
+                self.printWindow(True)
                 return
-        print("Ack not in window dropped: " + str(ack))
+        print("Sender: Ack not in window dropped: " + str(ack))
+        self.printWindow(True)
 
     def data_to_resend(self) -> list:
         def modify(pkt):
@@ -186,6 +221,7 @@ class SenderWindow:
 class ReceiverWindow:
     def __init__(self, seq) -> None:
         self.seq = seq
+        self.buffer = set()
 
     def update_cum_ack(self, ack, length) -> bool:
         outcome = self.seq == ack
@@ -194,4 +230,15 @@ class ReceiverWindow:
 
     def get_cum_ack(self):
         return self.seq
+
+    def add_to_buffer(self, seq, data):
+        self.buffer.add((seq, data))
+
+    def check_buffer(self, seq):
+        return seq in [i for i, _ in self.buffer]
+
+    def get_buffered_data(self, seq):
+        for i, j in self.buffer:
+            if i == seq: return j
+        return None
             
