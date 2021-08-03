@@ -49,25 +49,26 @@ class TCP:
         self.ack = ack
 
     def get_time(self) -> float:
+        '''Get the time since start of program'''
         return round((time.time() - self.epoch) * 1000, 3)
 
     def encode(self,seq, ack, data, packet_type) -> bytes:
+        '''Jsonify and encode packet'''
         return json.dumps({ "seq": seq, "ack": ack, "data": data, "p_type": packet_type }).encode()
 
     def decode(self,packet) -> set:
+        '''Decode and extract data from jsonified packet'''
         return json.loads(packet.decode()).values()
 
     def add_log(self,action, seq, ack, data, packet_type) -> None:
+        '''Log packet information'''
         self.log.append([action, self.get_time(), packet_type, seq, ack, len(data)])
 
     def get_log(self) -> list:
+        '''Return log'''
         return self.log
 
 class Sender(TCP):
-
-    # DESCRIPTION
-    # Sends packet then increases the seq number independently then adds to window
-    # Received packets are acked and removed -> else resend
 
     def __init__(self, client, seq, ack, window_length, addr) -> None:
         super().__init__(seq, ack)
@@ -120,10 +121,6 @@ class Sender(TCP):
         # if ack: self.seq = ack
 
 class Receiver(TCP):
-
-    # DESCRIPTION
-    # Receives packets and checks if they are in order using sequence numbers. Otherwise, 
-    # store in buffer and then transmit cumulative ack
 
     def __init__(self, server, seq, ack) -> None:
         super().__init__(seq, ack)
