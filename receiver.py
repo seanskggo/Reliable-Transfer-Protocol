@@ -46,9 +46,9 @@ server.bind((IP, port))
 receiver = Receiver(server, seq, ack)
 
 # Opening handshake
-receiver.receive()
-receiver.send(Packet.NONE, Packet.SYNACK)
-receiver.receive()
+receiver.receive(handshake=True)
+receiver.send(Packet.NONE, Packet.SYNACK, handshake=True)
+receiver.receive(handshake=True)
 
 # Open and write to file until teardown
 with open(filename, "w") as file:

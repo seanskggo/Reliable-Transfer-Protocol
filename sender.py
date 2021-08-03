@@ -62,9 +62,9 @@ sender = Sender(client, seq, ack, window_length, (ip, port))
 sender.set_PL_module(seed, pdrop)
 
 # Opening handshake
-sender.send(Packet.NONE, Packet.SYN, opening=True)
-sender.receive(opening=True)
-sender.send(Packet.NONE, Packet.ACK, opening=True)
+sender.send(Packet.NONE, Packet.SYN, handshake=True)
+sender.receive(handshake=True)
+sender.send(Packet.NONE, Packet.ACK, handshake=True)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
@@ -78,9 +78,9 @@ with open(filename, "r") as file:
         send_packet(packet)
         packet = file.read(MSS)
     # Initiate teardown -> no connection or teardown packets will be dropped
-    sender.send(Packet.NONE, Packet.FIN)
-    sender.receive()
-    sender.send(Packet.NONE, Packet.ACK)
+    sender.send(Packet.NONE, Packet.FIN, handshake=True)
+    sender.receive(handshake=True)
+    sender.send(Packet.NONE, Packet.ACK, handshake=True)
     
 # Create log file
 with open("Sender_log.txt", "w") as logfile:

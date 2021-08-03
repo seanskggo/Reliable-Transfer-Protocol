@@ -70,18 +70,18 @@ class Sender(TCP):
         self.addr = addr
         self.window = SenderWindow(window_length)
 
-    def send(self, data, packet_type, opening=False) -> None:
+    def send(self, data, packet_type, handshake=False) -> None:
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
         # add expected sequence number to window
-        if not opening: self.window.add(self.seq + len(data), data)
+        if not handshake: self.window.add(self.seq + len(data), data)
 
-    def receive(self, opening=False) -> None:
+    def receive(self, handshake=False) -> None:
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.update_ack(seq, ack, data, packet_type)
-        if not opening: self.window.ack(ack)
+        if not handshake: self.window.ack(ack)
 
     def drop(self, data, packet_type) -> None:
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
@@ -112,12 +112,12 @@ class Receiver(TCP):
         self.addr = None
         self.window = None
 
-    def send(self, data, packet_type) -> None:
+    def send(self, data, packet_type, handshake=False) -> None:
         # Send cumulative ack
         self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
 
-    def receive(self) -> str:
+    def receive(self, handshake=False) -> str:
         # Receive and log packet data
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
