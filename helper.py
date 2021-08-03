@@ -77,7 +77,7 @@ class Sender(TCP):
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
         else: self.seq += len(data)
         if not handshake: 
-            self.window.add(self.seq, data)
+            self.window.add(self.seq, self.ack, data)
 
     def receive(self, handshake=False) -> None:
         msg, _ = self.client.recvfrom(2048)
@@ -91,7 +91,7 @@ class Sender(TCP):
         # add expected sequence number to window
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
         else: self.seq += len(data)
-        self.window.add(self.seq, data)
+        self.window.add(self.seq, self.ack, data)
 
     def set_PL_module(self, seed, pdrop) -> None:
         random.seed(seed)
@@ -148,13 +148,13 @@ class SenderWindow:
         self.size = window_length
         self.window = collections.deque([None] * window_length)
 
-    def add(self, ack, packet) -> None:
+    def add(self, seq, ack, packet) -> None:
         if all(self.window): raise Exception
         for i in range(self.size - 1, -1, -1):
             if self.window[i]: 
-                self.window[i + 1] = (ack, packet)
+                self.window[i + 1] = (seq, ack, packet)
                 return
-        self.window[0] = (ack, packet)
+        self.window[0] = (seq, ack, packet)
 
     def ack(self, ack) -> None:
         for i in range(len(self.window)):
@@ -162,6 +162,7 @@ class SenderWindow:
                 self.window[i] = None
                 while self.window and not self.window[0]: self.window.popleft()
                 self.window += [None] * (self.size - len(self.window))
+                print("Ack received: " + str(ack))
                 return
         print("Ack not in window dropped: " + str(ack))
 
