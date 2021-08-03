@@ -20,6 +20,7 @@
 #            snd   1205.078     D      634    64     155  
 # Problem 3: Currently, the UDP buffer size is 2048 -> make it 
 #            dynamic
+# Problem 4: Need to calculate dropped packets etc well
 ##################################################################
 
 ##################################################################
@@ -165,6 +166,7 @@ class Receiver(TCP):
             if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else:
             if not self.window: self.window = ReceiverWindow(seq)
+            buffered_data = self.window.get_buffered_data(seq)
             if self.ack != seq:
                 print("out of order packet will be buffered")
                 self.window.add_to_buffer(seq, data)
@@ -173,13 +175,13 @@ class Receiver(TCP):
                 if not self.ack: self.ack = seq
                 if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
                 return "|BUFFERED|"
-            elif self.window.check_buffer(seq): 
+            elif buffered_data: 
                 print("duplicate packet dropped at receiver " + str(seq))
                 if not packet_type == Packet.FIN:
                     if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
                 if not self.ack: self.ack = seq
                 if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-                return self.window.get_buffered_data(seq)
+                return buffered_data
             self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
             # update window accordingly
             if not packet_type == Packet.FIN:
@@ -248,21 +250,22 @@ class ReceiverWindow:
         self.seq = self.seq + length if outcome else self.seq
         return outcome
 
-    def get_cum_ack(self):
+    def get_cum_ack(self) -> int:
         '''Get current cumulative ack'''
         return self.seq
 
-    def add_to_buffer(self, seq, data):
+    def add_to_buffer(self, seq, data) -> None:
         '''Add sequence number and data to buffer'''
         self.buffer.add((seq, data))
 
-    def check_buffer(self, seq):
-        return seq in [i for i, _ in self.buffer]
+    def get_buffered_data(self, seq) -> str:
+        '''Given a sequence number as key, return the buffered data'''
+        rtr = [(i, j) for i, j in self.buffer if i == seq]
+        if len(rtr) > 1: raise Exception        # REMOVE THIS LATER
+        return self.__remove_data(rtr)
 
-    def get_buffered_data(self, seq):
-        for i, j in self.buffer:
-            if i == seq: 
-                self.buffer.remove((i, j))
-                return j
-        return None
-            
+    def __remove_data(self, rtr) -> str:
+        '''Remove data from buffer and return the deleted data'''
+        if not rtr: return None
+        self.buffer.remove(rtr[0])
+        return rtr[0][1]
