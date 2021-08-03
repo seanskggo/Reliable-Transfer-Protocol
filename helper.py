@@ -172,10 +172,9 @@ class ReceiverWindow:
         self.seq = seq
 
     def update_cum_ack(self, ack, length) -> bool:
-        if self.seq == ack: 
-            self.seq += length
-            return True
-        else: return False
+        outcome = self.seq == ack
+        self.seq = self.seq + length if outcome else self.seq
+        return outcome
 
     def get_cum_ack(self):
         return self.seq
