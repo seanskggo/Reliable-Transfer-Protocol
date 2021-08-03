@@ -63,16 +63,6 @@ class TCP:
     def get_log(self) -> list:
         return self.log
 
-    def update_ack(self, seq, ack, data, packet_type) -> None:
-        # Send and then increase the seq to get the expected return ack which matches this seq
-        # Call this function after you send!
-        if not self.ack: self.ack = seq
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-        else: self.ack += len(data)
-        if not ack: return 
-        self.seq = ack
-        # if self.seq + len(data) == ack: self.seq = ack
-
 class Sender(TCP):
     def __init__(self, client, seq, ack, window_length, addr) -> None:
         super().__init__(seq, ack)
@@ -103,6 +93,17 @@ class Sender(TCP):
     def PL_module(self) -> bool:
         return True if random.random() > self.pdrop else False
 
+    def update_ack(self, seq, ack, data, packet_type) -> None:
+        # If current ack is 0 i.e. opening handshake, then make incoming
+        # sequence number the new ack number
+        if not self.ack: self.ack = seq
+        # Update the ack number
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        else: self.ack += len(data)
+        # If in coming ack from reciever is 0 i.e. from initial opening handshake, ignore it
+        if ack: self.seq = ack
+        # if self.seq + len(data) == ack: self.seq = ack
+
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
         super().__init__(seq, ack)
@@ -121,6 +122,16 @@ class Receiver(TCP):
         self.update_ack(seq, ack, data, packet_type)
         if not self.window: self.window = ReceiverWindow(self.ack)
         return data
+
+    def update_ack(self, seq, ack, data, packet_type) -> None:
+        # Send and then increase the seq to get the expected return ack which matches this seq
+        # Call this function after you send!
+        if not self.ack: self.ack = seq
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        else: self.ack += len(data)
+        if not ack: return 
+        self.seq = ack
+        # if self.seq + len(data) == ack: self.seq = ack
 
 ##################################################################
 # Sender Window Class
