@@ -57,8 +57,8 @@ with open(filename, "w") as file:
         receiver.send(Packet.NONE, Packet.ACK)
         file.write(data)
         data = receiver.receive()
-    receiver.send(Packet.NONE, Packet.FINACK)
-    receiver.receive()
+    receiver.send(Packet.NONE, Packet.FINACK, handshake=True)
+    receiver.receive(handshake=True)
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:

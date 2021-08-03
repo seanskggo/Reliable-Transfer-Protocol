@@ -94,16 +94,15 @@ class Sender(TCP):
         return True if random.random() > self.pdrop else False
 
     def update_ack(self, seq, ack, data, packet_type) -> None:
-        # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
-        # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
-        if ack and self.seq < ack: self.seq = ack
-        else: return
         # If current ack is 0 i.e. opening handshake, then make incoming
         # sequence number the new ack number
         if not self.ack: self.ack = seq
         # Update the ack number
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
+        # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
+        # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
+        if ack: self.seq = ack
 
 class Receiver(TCP):
     def __init__(self, server, seq, ack) -> None:
@@ -114,8 +113,9 @@ class Receiver(TCP):
 
     def send(self, data, packet_type, handshake=False) -> None:
         # Send cumulative ack
-        self.server.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
-        self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
+        seq_to_send = self.ack if handshake else self.window.get_cum_ack()
+        self.server.sendto(self.encode(self.seq, seq_to_send, data, packet_type), self.addr)
+        self.add_log(Action.SEND, self.seq, seq_to_send, data, packet_type)
 
     def receive(self, handshake=False) -> str:
         # Receive and log packet data
@@ -123,23 +123,12 @@ class Receiver(TCP):
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         # update window accordingly
-        
-        
-        
-        
-        self.update_ack(seq, ack, data, packet_type)
-        if not self.window: self.window = ReceiverWindow(self.ack)
-        print(seq)
-        # print(self.window.send_cum_ack(ack, len(data)))
-        return data
-
-    def update_ack(self, seq, ack, data, packet_type) -> None:
-        # Send and then increase the seq to get the expected return ack which matches this seq
-        # Call this function after you send!
+        if not (handshake or packet_type == Packet.FIN):
+            if not self.window: self.window = ReceiverWindow(seq)
+            if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
         if not self.ack: self.ack = seq
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-        else: self.ack += len(data)
-        if ack: self.seq = ack
+        return data
 
 ##################################################################
 # Sender Window Class
@@ -182,9 +171,12 @@ class ReceiverWindow:
     def __init__(self, seq) -> None:
         self.seq = seq
 
-    def send_cum_ack(self, ack, length) -> int:
+    def update_cum_ack(self, ack, length) -> bool:
         if self.seq == ack: 
             self.seq += length
-            return ack
-        else: return self.seq
+            return True
+        else: return False
+
+    def get_cum_ack(self):
+        return self.seq
             
