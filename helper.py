@@ -164,7 +164,6 @@ class Receiver(TCP):
                 if not self.ack: self.ack = seq
                 if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
                 return self.window.get_buffered_data(seq)
-            self.window.add_to_buffer(seq, data)
             self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
             # update window accordingly
             if not packet_type == Packet.FIN:
@@ -239,6 +238,8 @@ class ReceiverWindow:
 
     def get_buffered_data(self, seq):
         for i, j in self.buffer:
-            if i == seq: return j
+            if i == seq: 
+                self.buffer.remove((i, j))
+                return j
         return None
             
