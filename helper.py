@@ -43,6 +43,7 @@ class Action:
 
 class TCP:
     def __init__(self, seq, ack) -> None:
+        '''Initialise TCP instance'''
         self.log = list()
         self.epoch = time.time()
         self.seq = seq
@@ -71,58 +72,62 @@ class TCP:
 class Sender(TCP):
 
     def __init__(self, client, seq, ack, window_length, addr) -> None:
+        '''Initialise Sender instance'''
         super().__init__(seq, ack)
         self.client = client
         self.addr = addr
         self.window = SenderWindow(window_length)
 
     def send(self, data, packet_type, handshake=False) -> None:
+        '''Encode data and add to current window. Logs and sends the packet'''
         self.client.sendto(self.encode(self.seq, self.ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
-        # add expected sequence number to window
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
-        else: self.seq += len(data)
+        self.update_seq(data, packet_type)
         if not handshake: self.window.add(self.seq, self.ack, data)
 
     def resend(self, seq, ack, data, packet_type) -> None:
+        '''Log and send the data as a packet without adding to window'''
         self.client.sendto(self.encode(seq, ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, seq, ack, data, packet_type)
 
     def receive(self, handshake=False) -> None:
+        '''Log data with current sequence and ack number. Drops the packet'''
         msg, _ = self.client.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        self.update_ack(seq, ack, data, packet_type)
+        self.update_ack(seq, data, packet_type)
         if not handshake: self.window.ack(ack)
 
     def drop(self, data, packet_type) -> None:
+        '''Log data with current sequence and ack number. Drops the packet'''
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
-        # add expected sequence number to window
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
-        else: self.seq += len(data)
+        self.update_seq(data, packet_type)
         self.window.add(self.seq, self.ack, data)
 
     def set_PL_module(self, seed, pdrop) -> None:
+        '''Set drop rate and seed for PL module'''
         random.seed(seed)
         self.pdrop = pdrop
 
     def PL_module(self) -> bool:
+        '''Activate the PL module'''
         return True if random.random() > self.pdrop else False
 
-    def update_ack(self, seq, ack, data, packet_type) -> None:
-        # If current ack is 0 i.e. opening handshake, then make incoming
-        # sequence number the new ack number
+    def update_ack(self, seq, data, packet_type) -> None:
+        '''Given a receiver's sequence number, update the sender's ack number '''
         if not self.ack: self.ack = seq
-        # Update the ack number
         if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else: self.ack += len(data)
-        # # If in coming ack from reciever is not 0 i.e. from initial opening handshake, make the 
-        # # ack the new sequence number. Otherwise, the packet is a duplicate ack -> do not modify seq
-        # if ack: self.seq = ack
+
+    def update_seq(self, data, packet_type) -> None:
+        '''Update sequence number to the next expected sequence number'''
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        else: self.seq += len(data)
 
 class Receiver(TCP):
 
     def __init__(self, server, seq, ack) -> None:
+        '''Initialise Receiver instance'''
         super().__init__(seq, ack)
         self.server = server
         self.addr = None
@@ -176,6 +181,7 @@ class Receiver(TCP):
 ##################################################################
 
 class SenderWindow:
+
     def __init__(self, window_length) -> None:
         self.size = window_length
         self.window = collections.deque([None] * window_length)
