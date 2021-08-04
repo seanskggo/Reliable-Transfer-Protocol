@@ -38,10 +38,6 @@ seq, ack = 154, 0
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind((IP, port))
 
-##################################################################
-# Restart from here
-##################################################################
-
 # Instantiate receiver class
 receiver = Receiver(server, seq, ack)
 

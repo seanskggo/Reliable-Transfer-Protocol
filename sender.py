@@ -53,10 +53,6 @@ window_length = int(MWS/MSS)
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 client.settimeout(timeout/1000)
 
-##################################################################
-# Restart from here
-##################################################################
-
 # Instantiate sender class
 sender = Sender(client, seq, ack, window_length, (ip, port))
 sender.set_PL_module(seed, pdrop)
@@ -104,9 +100,30 @@ with open("Sender_log.txt", "w") as logfile:
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
     logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n\n")
 
+##################################################################
+# Past Ideas
+##################################################################
 
-    # def send_packet(packet):
-    #     if sender.PL_module(): sender.send(packet, Packet.DATA)
-    #     else: sender.drop(packet, Packet.DATA)
-    #     try: sender.receive()
-    #     except: send_packet(packet)
+# def send_packet(packet):
+#     if sender.PL_module(): sender.send(packet, Packet.DATA)
+#     else: sender.drop(packet, Packet.DATA)
+#     try: sender.receive()
+#     except: send_packet(packet)
+
+# print("-----------------")
+# for ln in range(window_length):
+#     if sender.PL_module(): sender.send(packet, Packet.DATA)
+#     else: sender.drop(packet, Packet.DATA)
+#     packet = file.read(MSS)
+#     if not packet: break
+#     sender.window.printWindow(True)
+# fine = True
+# for _ in range(ln + 1):
+#     try: sender.receive()
+#     except: fine = False
+# if not fine:
+#     print("packets dropped")
+#     print( sender.window.data_to_resend())
+#     for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
+#     [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
+# print("-----------------")
