@@ -101,7 +101,7 @@ with open("Sender_log.txt", "w") as logfile:
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
         elif a == Action.DROP: num_seg -= 1
         if a == Action.DROP: drp_pkt += 1
-        logfile.write(f"{a:<5} {b:<12} {c:<6} {d:<6} {f:<6} {e:<6}\n")
+        logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")
     logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
