@@ -168,20 +168,22 @@ class Receiver(TCP):
         '''Receive and parse segment. Return or buffer data'''
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
-        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        if not handshake: data = self.__handle_window(seq, data, packet_type)
+        if handshake: self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+        else: data = self.__handle_window(seq, ack, data, packet_type)
         if not self.ack: self.ack = seq
         if packet_type in self.header_bytes(): self.ack += 1
         return data
 
-    def __handle_window(self, seq, data, packet_type):
+    def __handle_window(self, seq, ack, data, packet_type):
         '''Add data to buffer if necessary and update cumulative ack'''
         if not self.window: self.window = ReceiverWindow(seq)
-        buf_data, ln = self.window.get_buffered_data(seq), len(data)
+        buf_data, ln = self.window.get_buf_data(seq), len(data)
+        action, o_data = Action.RECEIVE, data
         if self.ack != seq:
-            self.window.add_to_buffer(seq, data)
+            self.window.add_to_buf(seq, data)
             data = Data.BUFFERED
-        elif buf_data: data = buf_data
+        elif buf_data: data, action = buf_data, Action.DROP
+        self.add_log(action, seq, ack, o_data, packet_type)
         if packet_type == Packet.FIN: return data
         if self.window.update_cum_ack(seq, ln): self.ack += ln
         return data
@@ -230,7 +232,8 @@ class SenderWindow(Slot):
 
     def data_to_resend(self) -> list:
         '''Return a list of packets in window that have not been acknowledged'''
-        return [(lambda a, b, c: (a - len(c), b, c))(*i) for i in self.window if i]
+        return [(lambda a, b, c: (a - len(c), b, c))(*i) 
+            for i in self.window if i not in (Slot.EMPTY, Slot.ACKED)]
 
     ##################################################################
     # REMOVE LATER!!!
@@ -260,17 +263,17 @@ class ReceiverWindow:
         '''Get current cumulative ack'''
         return self.seq
 
-    def add_to_buffer(self, seq, data) -> None:
+    def add_to_buf(self, seq, data) -> None:
         '''Add sequence number and data to buffer'''
         self.buffer.add((seq, data))
 
-    def get_buffered_data(self, seq) -> str:
+    def get_buf_data(self, seq) -> str:
         '''Given a sequence number as key, return the buffered data'''
         rtr = [(i, j) for i, j in self.buffer if i == seq]
         if len(rtr) > 1: raise Exception        # REMOVE THIS LATER
-        return self.__remove_data(rtr)
+        return self.__rm_data(rtr)
 
-    def __remove_data(self, rtr) -> str:
+    def __rm_data(self, rtr) -> str:
         '''Remove data from buffer and return the deleted data'''
         if not rtr: return None
         self.buffer.remove(rtr[0])
