@@ -169,12 +169,12 @@ class Receiver(TCP):
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        if not handshake: data = self.handle_window(seq, data, packet_type)
+        if not handshake: data = self.__handle_window(seq, data, packet_type)
         if not self.ack: self.ack = seq
         if packet_type in self.header_bytes(): self.ack += 1
         return data
 
-    def handle_window(self, seq, data, packet_type):
+    def __handle_window(self, seq, data, packet_type):
         '''Add data to buffer if necessary and update cumulative ack'''
         if not self.window: self.window = ReceiverWindow(seq)
         buf_data, ln = self.window.get_buffered_data(seq), len(data)
@@ -218,12 +218,12 @@ class SenderWindow:
         self.printWindow(True)
 
     def data_to_resend(self) -> list:
-        def modify(pkt):
-            a, b, c = pkt
-            return (a - len(c), b, c)
-        return [modify(i) for i in self.window if i]
+        '''Return a list of packets in window that have not been acknowledged'''
+        return [(lambda a, b, c: (a - len(c), b, c))(*i) for i in self.window if i]
 
-    ### REMOVE LATER!!!
+    ##################################################################
+    # REMOVE LATER!!!
+    ##################################################################
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] if i else None for i in self.window])
         else: print(self.window)
