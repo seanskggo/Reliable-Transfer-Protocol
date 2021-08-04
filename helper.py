@@ -162,12 +162,12 @@ class Receiver(TCP):
     def receive(self, handshake=False) -> str:
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
+        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
 
 
 
 
         if handshake:
-            self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
             if not self.ack: self.ack = seq
             if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         else:
@@ -188,7 +188,6 @@ class Receiver(TCP):
                 if not self.ack: self.ack = seq
                 if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
                 return buffered_data
-            self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
             # update window accordingly
             if not packet_type == Packet.FIN:
                 if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
