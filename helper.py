@@ -68,6 +68,7 @@ class TCP:
         self.epoch = time.time()
         self.seq = seq
         self.ack = ack
+        self.stats = None
 
     def get_time(self) -> float:
         '''Get the time since start of program'''
@@ -92,6 +93,10 @@ class TCP:
     def header_bytes(self) -> tuple:
         '''Return a tuple of packet types that consume a byte'''
         return (Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK)
+    
+    def get_stats(self) -> list:
+        '''Return TCP stats'''
+        return self.stats.values()
 
 class Sender(TCP):
 

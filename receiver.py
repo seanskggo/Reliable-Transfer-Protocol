@@ -64,7 +64,8 @@ with open(filename, "w") as file:
 with open("Receiver_log.txt", "w") as logfile:
     for a, b, c, d, e, f in receiver.get_log():
         logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
+    tot_data, num_seg, num_dup = receiver.get_stats()
     logfile.write("\n--------- Log File Statistics ---------\n\n")
-    logfile.write(f"Total Data Received (bytes):     {receiver.stats['tot_data']}\n")
-    logfile.write(f"No. Data Segments Received:      {receiver.stats['num_seg']}\n")
-    logfile.write(f"No. Duplicate Segments:          {receiver.stats['num_dup']}\n")
+    logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
+    logfile.write(f"No. Data Segments Received:      {num_seg}\n")
+    logfile.write(f"No. Duplicate Segments:          {num_dup}\n")
