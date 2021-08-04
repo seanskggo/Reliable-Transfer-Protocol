@@ -101,7 +101,7 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
         self.window = SenderWindow(window_length)
-        self.stats = { "tot_data": 0, "num_seg": 0, "num_dup": 0, "re_seg": 0, "dup_ack": 0 }
+        self.stats = { "tot_data": 0, "num_seg": 0, "drp_pkt": 0, "re_seg": 0, "dup_ack": 0 }
 
     def send(self, data, packet_type, handshake=False) -> None:
         '''Encode data and add to current window. Logs and sends the packet'''
@@ -116,6 +116,7 @@ class Sender(TCP):
         '''Log and send the data as a packet without adding to window'''
         self.client.sendto(self.encode(seq, ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, seq, ack, data, packet_type)
+        self.stats["re_seg"] += 1
 
     def receive(self, handshake=False) -> None:
         '''Log data with current sequence and ack number. Drops the packet'''
@@ -123,7 +124,9 @@ class Sender(TCP):
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.__update_ack(seq, data, packet_type)
-        if not handshake: self.window.ack(ack)
+        if not handshake: 
+            new_slots = self.window.ack(ack)
+            if new_slots == 0: self.stats["dup_ack"] += 1
 
     def drop(self, data, packet_type) -> None:
         '''Log data with current sequence and ack number. Drops the packet'''
@@ -131,6 +134,8 @@ class Sender(TCP):
         self.__update_seq(data, packet_type)
         self.window.add(self.seq, self.ack, data)
         self.stats["tot_data"] += len(data)
+        if packet_type == Packet.DATA: self.stats["num_seg"] += 1
+        self.stats["drp_pkt"] += 1
 
     def set_PL_module(self, seed, pdrop) -> None:
         '''Set drop rate and seed for PL module'''
