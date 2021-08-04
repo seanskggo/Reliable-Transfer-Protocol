@@ -102,7 +102,7 @@ with open("Sender_log.txt", "w") as logfile:
     logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
     logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
-    logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n")
+    logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n\n")
 
 
     # def send_packet(packet):

@@ -68,4 +68,4 @@ with open("Receiver_log.txt", "w") as logfile:
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
     logfile.write(f"No. Data Segments Received:      {num_seg}\n")
-    logfile.write(f"No. Duplicate Segments:          {num_dup}\n")
+    logfile.write(f"No. Duplicate Segments:          {num_dup}\n\n")

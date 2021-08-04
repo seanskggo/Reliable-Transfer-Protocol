@@ -20,8 +20,7 @@
 #            snd   1205.078     D      634    64     155  
 # Problem 3: Currently, the UDP buffer size is 2048 -> make it 
 #            dynamic
-# Problem 4: Need to calculate dropped packets etc well
-# Problem 5: Revisit __handle_window logic!!!
+# Problem 4: Revisit __handle_window logic!!!
 ##################################################################
 
 ##################################################################
