@@ -163,38 +163,22 @@ class Receiver(TCP):
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-
-
-
-
-        if handshake:
-            if not self.ack: self.ack = seq
-            if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-        else:
+        if not handshake:
             if not self.window: self.window = ReceiverWindow(seq)
             buffered_data = self.window.get_buffered_data(seq)
             if self.ack != seq:
                 print("out of order packet will be buffered")
                 self.window.add_to_buffer(seq, data)
-                if not packet_type == Packet.FIN:
-                    if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
-                if not self.ack: self.ack = seq
-                if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-                return Data.BUFFERED
+                data = Data.BUFFERED
             elif buffered_data: 
                 print("duplicate packet dropped at receiver " + str(seq))
-                if not packet_type == Packet.FIN:
-                    if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
-                if not self.ack: self.ack = seq
-                if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-                return buffered_data
-            # update window accordingly
+                data = buffered_data
+            else: 
+                print("packet received at receiver " + str(seq))
             if not packet_type == Packet.FIN:
                 if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
-            if not self.ack: self.ack = seq
-            if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-            print("packet received at receiver " + str(seq))
-        # print(self.seq, data)
+        if not self.ack: self.ack = seq
+        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
         return data
 
 ##################################################################
@@ -234,6 +218,7 @@ class SenderWindow:
             return (a - len(c), b, c)
         return [modify(i) for i in self.window if i]
 
+    ### REMOVE LATER!!!
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] if i else None for i in self.window])
         else: print(self.window)
