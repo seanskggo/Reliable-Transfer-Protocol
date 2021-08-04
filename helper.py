@@ -165,25 +165,25 @@ class Receiver(TCP):
         else: self.seq += len(data)
 
     def receive(self, handshake=False) -> str:
+        '''Receive and parse segment. Return or buffer data'''
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
-        if not handshake:
-            if not self.window: self.window = ReceiverWindow(seq)
-            buffered_data = self.window.get_buffered_data(seq)
-            if self.ack != seq:
-                print("out of order packet will be buffered")
-                self.window.add_to_buffer(seq, data)
-                data = Data.BUFFERED
-            elif buffered_data: 
-                print("duplicate packet dropped at receiver " + str(seq))
-                data = buffered_data
-            else: 
-                print("packet received at receiver " + str(seq))
-            if not packet_type == Packet.FIN:
-                if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
+        if not handshake: data = self.handle_window(seq, data, packet_type)
         if not self.ack: self.ack = seq
         if packet_type in self.header_bytes(): self.ack += 1
+        return data
+
+    def handle_window(self, seq, data, packet_type):
+        '''Add data to buffer if necessary and update cumulative ack'''
+        if not self.window: self.window = ReceiverWindow(seq)
+        buf_data, ln = self.window.get_buffered_data(seq), len(data)
+        if self.ack != seq:
+            self.window.add_to_buffer(seq, data)
+            data = Data.BUFFERED
+        elif buf_data: data = buf_data
+        if packet_type == Packet.FIN: return data
+        if self.window.update_cum_ack(seq, ln): self.ack += ln
         return data
 
 ##################################################################
