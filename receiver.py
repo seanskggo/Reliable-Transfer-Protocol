@@ -54,9 +54,8 @@ receiver.receive(handshake=True)
 with open(filename, "w") as file:
     data = receiver.receive()
     while data:
-        while data == Data.BUFFERED: data = receiver.receive()
         receiver.send(Data.NONE, Packet.ACK)
-        file.write(data)
+        if data != Data.BUFFERED: file.write(data)
         data = receiver.receive()
     receiver.send(Data.NONE, Packet.FINACK, handshake=True)
     receiver.receive(handshake=True)
