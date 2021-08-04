@@ -62,9 +62,9 @@ sender = Sender(client, seq, ack, window_length, (ip, port))
 sender.set_PL_module(seed, pdrop)
 
 # Opening handshake
-sender.send(Packet.NONE, Packet.SYN, handshake=True)
+sender.send(Data.NONE, Packet.SYN, handshake=True)
 sender.receive(handshake=True)
-sender.send(Packet.NONE, Packet.ACK, handshake=True)
+sender.send(Data.NONE, Packet.ACK, handshake=True)
 
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
@@ -88,9 +88,9 @@ with open(filename, "r") as file:
             [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
         print("-----------------")
     # Initiate teardown -> no connection or teardown packets will be dropped
-    sender.send(Packet.NONE, Packet.FIN, handshake=True)
+    sender.send(Data.NONE, Packet.FIN, handshake=True)
     sender.receive(handshake=True)
-    sender.send(Packet.NONE, Packet.ACK, handshake=True)
+    sender.send(Data.NONE, Packet.ACK, handshake=True)
     
 # Create log file
 with open("Sender_log.txt", "w") as logfile:

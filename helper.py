@@ -44,13 +44,16 @@ class Packet:
     SYNACK = "SA"
     FIN = "F"
     FINACK = "FA"
-    NONE = ""
 
 # Packet action types
 class Action:
     SEND = "snd"
     RECEIVE = "rcv"
     DROP = "drop"
+
+class Data:
+    NONE = ""
+    BUFFERED = "bfd"
 
 ##################################################################
 # Functions
@@ -157,9 +160,12 @@ class Receiver(TCP):
         else: self.seq += len(data)
 
     def receive(self, handshake=False) -> str:
-        # Receive and log packet data
         msg, self.addr = self.server.recvfrom(2048)
         seq, ack, data, packet_type = self.decode(msg)
+
+
+
+
         if handshake:
             self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
             if not self.ack: self.ack = seq
@@ -174,7 +180,7 @@ class Receiver(TCP):
                     if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
                 if not self.ack: self.ack = seq
                 if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
-                return "|BUFFERED|"
+                return Data.BUFFERED
             elif buffered_data: 
                 print("duplicate packet dropped at receiver " + str(seq))
                 if not packet_type == Packet.FIN:

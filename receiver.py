@@ -47,17 +47,18 @@ receiver = Receiver(server, seq, ack)
 
 # Opening handshake
 receiver.receive(handshake=True)
-receiver.send(Packet.NONE, Packet.SYNACK, handshake=True)
+receiver.send(Data.NONE, Packet.SYNACK, handshake=True)
 receiver.receive(handshake=True)
 
 # Open and write to file until teardown
 with open(filename, "w") as file:
     data = receiver.receive()
     while data:
-        receiver.send(Packet.NONE, Packet.ACK)
+        while data == Data.BUFFERED: data = receiver.receive()
+        receiver.send(Data.NONE, Packet.ACK)
         file.write(data)
         data = receiver.receive()
-    receiver.send(Packet.NONE, Packet.FINACK, handshake=True)
+    receiver.send(Data.NONE, Packet.FINACK, handshake=True)
     receiver.receive(handshake=True)
 
 # Create log file
