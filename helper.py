@@ -110,6 +110,7 @@ class Sender(TCP):
         self.__update_seq(data, packet_type)
         if not handshake: self.window.add(self.seq, self.ack, data)
         self.stats["tot_data"] += len(data)
+        if packet_type == Packet.DATA: self.stats["num_seg"] += 1
 
     def resend(self, seq, ack, data, packet_type) -> None:
         '''Log and send the data as a packet without adding to window'''
