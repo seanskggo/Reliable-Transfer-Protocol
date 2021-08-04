@@ -97,10 +97,9 @@ with open("Sender_log.txt", "w") as logfile:
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
     for a, b, c, d, e, f in sender.get_log():
         if a == Action.SEND: tot_data += f
-        elif a == Action.DROP: tot_data -= f
         if a == Action.SEND and c == Packet.DATA: num_seg += 1
-        elif a == Action.DROP: num_seg -= 1
         if a == Action.DROP: drp_pkt += 1
+        if a == Action.DROP: re_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
     logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")

@@ -21,6 +21,7 @@
 # Problem 3: Currently, the UDP buffer size is 2048 -> make it 
 #            dynamic
 # Problem 4: Need to calculate dropped packets etc well
+# Problem 5: Revisit __handle_window logic!!!
 ##################################################################
 
 ##################################################################
@@ -155,6 +156,7 @@ class Receiver(TCP):
         self.server = server
         self.addr = None
         self.window = None
+        self.stats = {"tot_data": 0, "num_seg:": 0, "num_dup": 0}
 
     def send(self, data, packet_type, handshake=False) -> None:
         '''Encode data with current cumulative ack. Logs and sends the packet'''
@@ -178,12 +180,15 @@ class Receiver(TCP):
         '''Add data to buffer if necessary and update cumulative ack'''
         if not self.window: self.window = ReceiverWindow(seq)
         buf_data, ln = self.window.get_buf_data(seq), len(data)
-        action, o_data = Action.RECEIVE, data
         if self.ack != seq:
             self.window.add_to_buf(seq, data)
-            data = Data.BUFFERED
-        elif buf_data: data, action = buf_data, Action.DROP
-        self.add_log(action, seq, ack, o_data, packet_type)
+            self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
+            return Data.BUFFERED
+        elif buf_data:
+            self.add_log(Action.DROP, seq, ack, data, packet_type)
+            if self.window.update_cum_ack(seq, ln): self.ack += ln
+            return buf_data
+        self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         if packet_type == Packet.FIN: return data
         if self.window.update_cum_ack(seq, ln): self.ack += ln
         return data
