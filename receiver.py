@@ -62,13 +62,9 @@ with open(filename, "w") as file:
 
 # Create log file
 with open("Receiver_log.txt", "w") as logfile:
-    tot_data, num_seg, num_dup = [0] * 3
     for a, b, c, d, e, f in receiver.get_log():
-        if a == Action.RECEIVE: tot_data += f
-        if a == Action.RECEIVE and c == Packet.DATA: num_seg += 1
-        if a == Action.DROP: num_dup += 1
         logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
-    logfile.write(f"Total Data Received (bytes):     {tot_data}\n")
-    logfile.write(f"No. Data Segments Received:      {num_seg}\n")
-    logfile.write(f"No. Duplicate Segments:          {num_dup}\n")
+    logfile.write(f"Total Data Received (bytes):     {receiver.stats['tot_data']}\n")
+    logfile.write(f"No. Data Segments Received:      {receiver.stats['num_seg']}\n")
+    logfile.write(f"No. Duplicate Segments:          {receiver.stats['num_dup']}\n")

@@ -156,7 +156,7 @@ class Receiver(TCP):
         self.server = server
         self.addr = None
         self.window = None
-        self.stats = {"tot_data": 0, "num_seg:": 0, "num_dup": 0}
+        self.stats = { "tot_data": 0, "num_seg": 0, "num_dup": 0 }
 
     def send(self, data, packet_type, handshake=False) -> None:
         '''Encode data with current cumulative ack. Logs and sends the packet'''
@@ -174,6 +174,9 @@ class Receiver(TCP):
         else: data = self.__handle_window(seq, ack, data, packet_type)
         if not self.ack: self.ack = seq
         if packet_type in self.header_bytes(): self.ack += 1
+        if data != Data.BUFFERED: 
+            self.stats["tot_data"] += len(data)
+            self.stats["num_seg"] += 1
         return data
 
     def __handle_window(self, seq, ack, data, packet_type):
@@ -186,6 +189,7 @@ class Receiver(TCP):
             return Data.BUFFERED
         elif buf_data:
             self.add_log(Action.DROP, seq, ack, data, packet_type)
+            self.stats["num_dup"] += 1
             if self.window.update_cum_ack(seq, ln): self.ack += ln
             return buf_data
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
@@ -216,7 +220,6 @@ class SenderWindow(Slot):
                 self.window[i] = (seq, ack, packet)
                 return
 
-    # Ack the packet and tell the receiver if a new slot has opened up or not
     def ack(self, ack) -> int:
         '''Acknowledge packet and update window. Return number of new slots created'''
         for i, j in enumerate(self.window):
