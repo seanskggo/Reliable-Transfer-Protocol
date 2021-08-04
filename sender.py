@@ -94,12 +94,7 @@ with open(filename, "r") as file:
     
 # Create log file
 with open("Sender_log.txt", "w") as logfile:
-    tot_data, num_seg, drp_pkt, re_seg, dup_ack = [0] * 5
     for a, b, c, d, e, f in sender.get_log():
-        if a == Action.SEND: tot_data += f
-        if a == Action.SEND and c == Packet.DATA: num_seg += 1
-        if a == Action.DROP: drp_pkt += 1
-        if a == Action.DROP: re_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
     tot_data, num_seg, drp_pkt, re_seg, dup_ack = sender.get_stats()
     logfile.write("\n--------- Log File Statistics ---------\n\n")
