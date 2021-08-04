@@ -51,6 +51,7 @@ class Action:
     RECEIVE = "rcv"
     DROP = "drop"
 
+# Special data types
 class Data:
     NONE = ""
     BUFFERED = "bfd"
