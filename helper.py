@@ -88,6 +88,10 @@ class TCP:
         '''Return log'''
         return self.log
 
+    def header_bytes(self) -> tuple:
+        '''Return a tuple of packet types that consume a byte'''
+        return (Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK)
+
 class Sender(TCP):
 
     def __init__(self, client, seq, ack, window_length, addr) -> None:
@@ -135,12 +139,12 @@ class Sender(TCP):
     def __update_ack(self, seq, data, packet_type) -> None:
         '''Given a receiver's sequence number, update the sender's ack number '''
         if not self.ack: self.ack = seq
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        if packet_type in self.header_bytes(): self.ack += 1
         else: self.ack += len(data)
 
     def __update_seq(self, data, packet_type) -> None:
         '''Update sequence number to the next expected sequence number'''
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        if packet_type in self.header_bytes(): self.seq += 1
         else: self.seq += len(data)
 
 class Receiver(TCP):
@@ -157,7 +161,7 @@ class Receiver(TCP):
         cum_ack = self.ack if handshake else self.window.get_cum_ack()
         self.server.sendto(self.encode(self.seq, cum_ack, data, packet_type), self.addr)
         self.add_log(Action.SEND, self.seq, cum_ack, data, packet_type)
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.seq += 1
+        if packet_type in self.header_bytes(): self.seq += 1
         else: self.seq += len(data)
 
     def receive(self, handshake=False) -> str:
@@ -179,7 +183,7 @@ class Receiver(TCP):
             if not packet_type == Packet.FIN:
                 if self.window.update_cum_ack(seq, len(data)): self.ack += len(data)
         if not self.ack: self.ack = seq
-        if packet_type in [Packet.FIN, Packet.FINACK, Packet.SYN, Packet.SYNACK]: self.ack += 1
+        if packet_type in self.header_bytes(): self.ack += 1
         return data
 
 ##################################################################
