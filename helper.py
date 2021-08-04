@@ -101,6 +101,7 @@ class Sender(TCP):
         self.client = client
         self.addr = addr
         self.window = SenderWindow(window_length)
+        self.stats = { "tot_data": 0, "num_seg": 0, "num_dup": 0, "re_seg": 0, "dup_ack": 0 }
 
     def send(self, data, packet_type, handshake=False) -> None:
         '''Encode data and add to current window. Logs and sends the packet'''
@@ -108,6 +109,7 @@ class Sender(TCP):
         self.add_log(Action.SEND, self.seq, self.ack, data, packet_type)
         self.__update_seq(data, packet_type)
         if not handshake: self.window.add(self.seq, self.ack, data)
+        self.stats["tot_data"] += len(data)
 
     def resend(self, seq, ack, data, packet_type) -> None:
         '''Log and send the data as a packet without adding to window'''
@@ -127,6 +129,7 @@ class Sender(TCP):
         self.add_log(Action.DROP, self.seq, self.ack, data, packet_type)
         self.__update_seq(data, packet_type)
         self.window.add(self.seq, self.ack, data)
+        self.stats["tot_data"] += len(data)
 
     def set_PL_module(self, seed, pdrop) -> None:
         '''Set drop rate and seed for PL module'''
@@ -174,7 +177,7 @@ class Receiver(TCP):
         else: data = self.__handle_window(seq, ack, data, packet_type)
         if not self.ack: self.ack = seq
         if packet_type in self.header_bytes(): self.ack += 1
-        if data != Data.BUFFERED: 
+        if data != Data.BUFFERED and packet_type == Packet.DATA: 
             self.stats["tot_data"] += len(data)
             self.stats["num_seg"] += 1
         return data

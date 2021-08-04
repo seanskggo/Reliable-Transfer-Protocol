@@ -102,7 +102,7 @@ with open("Sender_log.txt", "w") as logfile:
         if a == Action.DROP: re_seg += 1
         logfile.write(f"{a:<5} {b:<12} {c:<4} {d:<8} {f:<6} {e:<6}\n")
     logfile.write("\n--------- Log File Statistics ---------\n\n")
-    logfile.write(f"Total Data Transferred (bytes):  {tot_data}\n")
+    logfile.write(f"Total Data Transferred (bytes):  {sender.stats['tot_data']}\n")
     logfile.write(f"No. Data Segments Sent:          {num_seg}\n")
     logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
