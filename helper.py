@@ -190,32 +190,43 @@ class Receiver(TCP):
 # Sender Window Class
 ##################################################################
 
-class SenderWindow:
+# Sender window slot types
+class Slot:
+    EMPTY = "empty"
+    ACKED = "acked"
+
+class SenderWindow(Slot):
 
     def __init__(self, window_length) -> None:
         '''Initialise Sender Window instance'''
         self.size = window_length
-        self.window = collections.deque([None] * window_length)
+        self.window = collections.deque([Slot.EMPTY] * window_length)
 
     def add(self, seq, ack, packet) -> None:
-        if all(self.window): raise Exception
-        for i in range(self.size - 1, -1, -1):
-            if self.window[i]: 
-                self.window[i + 1] = (seq, ack, packet)
+        '''Add packet information to empty slot in window'''
+        for i, j in enumerate(self.window):
+            if j == Slot.EMPTY: 
+                self.window[i] = (seq, ack, packet)
                 return
-        self.window[0] = (seq, ack, packet)
 
-    def ack(self, ack) -> None:
-        for i in range(len(self.window)):
-            if self.window and self.window[i] and self.window[i][0] == ack: 
-                self.window[i] = None
-                while self.window and not self.window[0]: self.window.popleft()
-                self.window += [None] * (self.size - len(self.window))
-                print("Sender: Ack received: " + str(ack))
-                self.printWindow(True)
-                return
-        print("Sender: Ack not in window dropped: " + str(ack))
-        self.printWindow(True)
+    # Ack the packet and tell the receiver if a new slot has opened up or not
+    def ack(self, ack) -> int:
+        '''Acknowledge packet and update window. Return number of new slots created'''
+        for i, j in enumerate(self.window):
+            if j in (Slot.EMPTY, Slot.ACKED): continue
+            if j[0] == ack: 
+                self.window[i] = Slot.ACKED
+                return self.__move_window()
+        return 0
+
+    def __move_window(self) -> int:
+        '''Slide/update window. Uses collections.deque for O(1) popleft() operation'''
+        count = 0
+        while self.window[0] == Slot.ACKED:
+            self.window.popleft()
+            self.window.append(Slot.EMPTY)
+            count += 1
+        return count
 
     def data_to_resend(self) -> list:
         '''Return a list of packets in window that have not been acknowledged'''
@@ -226,7 +237,7 @@ class SenderWindow:
     ##################################################################
     def printWindow(self, ack_only=False) -> None:
         if ack_only: print([i[0] if i else None for i in self.window])
-        else: print(self.window)
+        else: print([i if i else None for i in self.window])
 
 ##################################################################
 # Receiver Window Class
