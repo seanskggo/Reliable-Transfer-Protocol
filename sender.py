@@ -69,7 +69,7 @@ with open(filename, "r") as file:
     while packet:
         r, w, e = select.select([], [client], [], 0.6)
         if w:
-            while not sender.is_full():
+            while not sender.is_full() and packet:
                 if sender.PL_module(): sender.send(packet, Packet.DATA)
                 else: sender.drop(packet, Packet.DATA)
                 sender.window.printWindow(True)
