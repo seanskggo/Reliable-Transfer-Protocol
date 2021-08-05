@@ -35,7 +35,7 @@ try:
     ip, port, filename, MWS, MSS, timeout, pdrop, seed = (
         sys.argv[1], int(sys.argv[2]), 
         sys.argv[3], int(sys.argv[4]), 
-        int(sys.argv[5]), int(sys.argv[6]), 
+        int(sys.argv[5]), float(sys.argv[6]), 
         float(sys.argv[7]), sys.argv[8], 
     )
 except: exit(SENDER_ERROR)
