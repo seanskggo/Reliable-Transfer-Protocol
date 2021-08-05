@@ -12,8 +12,6 @@
 # Problem 1: Currently, the UDP buffer size is 2048 -> make it 
 #            dynamic
 # Problem 2: Revisit __handle_window logic!!!
-# Problem 3: The while loop after the packet sending is flawed
-#            -> what happens if the last packets were dropped?
 ##################################################################
 
 ##################################################################
@@ -72,21 +70,27 @@ sender.send(Data.NONE, Packet.SYN, handshake=True)
 sender.receive(handshake=True)
 sender.send(Data.NONE, Packet.ACK, handshake=True)
 
+# Polled send and receive functions
+def poll_send():
+    global packet
+    _, w, _ = select.select([], [client], [], timeout/1000)
+    while w and not sender.is_full() and packet:
+        if sender.PL_module(): sender.send(packet, Packet.DATA)
+        else: sender.drop(packet, Packet.DATA)
+        packet = file.read(MSS)
+def poll_receive():
+    r, w, e = select.select([client], [], [], timeout/1000)
+    if r: sender.receive()
+    if not (r or w or e): 
+        for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
+
 # Open file for reading. If the file does not exist, throw error
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        r, w, e = select.select([], [client], [], timeout/1000)
-        if w:
-            while not sender.is_full() and packet:
-                if sender.PL_module(): sender.send(packet, Packet.DATA)
-                else: sender.drop(packet, Packet.DATA)
-                packet = file.read(MSS)
-        r, w, e = select.select([client], [], [], timeout/1000)
-        if r: sender.receive()
-        if not (r or w or e): 
-            for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
-    while not sender.is_empty(): sender.receive()
+        poll_send()
+        poll_receive()
+    while not sender.is_empty(): poll_receive()
     # Initiate teardown -> no connection or teardown packets will be dropped
     sender.send(Data.NONE, Packet.FIN, handshake=True)
     sender.receive(handshake=True)
