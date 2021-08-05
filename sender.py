@@ -62,7 +62,6 @@ window_length = int(MWS/MSS)
 
 # Create UDP socket client
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client.settimeout(timeout/1000)
 
 # Instantiate sender class
 sender = Sender(client, seq, ack, window_length, (ip, port))
@@ -77,15 +76,13 @@ sender.send(Data.NONE, Packet.ACK, handshake=True)
 with open(filename, "r") as file:
     packet = file.read(MSS)
     while packet:
-        r, w, e = select.select([], [client], [], 0.6)
+        r, w, e = select.select([], [client], [], timeout/1000)
         if w:
             while not sender.is_full() and packet:
                 if sender.PL_module(): sender.send(packet, Packet.DATA)
                 else: sender.drop(packet, Packet.DATA)
                 packet = file.read(MSS)
-                # if sender.PL_module(): sender.send(packet, Packet.DATA)
-                # else: sender.drop(packet, Packet.DATA)
-        r, w, e = select.select([client], [], [], 0.6)
+        r, w, e = select.select([client], [], [], timeout/1000)
         if r: sender.receive()
         if not (r or w or e): 
             for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
