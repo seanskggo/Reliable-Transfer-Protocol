@@ -18,7 +18,7 @@ import collections
 import json
 
 ##################################################################
-# Types
+# Types and Constants
 ##################################################################
 
 # Packet types
@@ -41,11 +41,16 @@ class Data:
     NONE = ""
     BUFFERED = "bfd"
 
+# Sender window slot types
+class Slot:
+    EMPTY = "empty"
+    ACKED = "acked"
+
 # Maximum receiver segment size of 65Kbytes with surplus
 MAX_SEG_SIZE = 66000
 
 ##################################################################
-# Functions
+# TCP Class
 ##################################################################
 
 class TCP:
@@ -84,6 +89,10 @@ class TCP:
     def get_stats(self) -> list:
         '''Return TCP stats'''
         return self.stats.values()
+
+##################################################################
+# Sender Class
+##################################################################
 
 class Sender(TCP):
 
@@ -157,6 +166,10 @@ class Sender(TCP):
         '''Check if current window is empty'''
         return self.window.is_empty()
 
+##################################################################
+# Receiver Class
+##################################################################
+
 class Receiver(TCP):
 
     def __init__(self, server, seq, ack) -> None:
@@ -209,11 +222,6 @@ class Receiver(TCP):
 ##################################################################
 # Sender Window Class
 ##################################################################
-
-# Sender window slot types
-class Slot:
-    EMPTY = "empty"
-    ACKED = "acked"
 
 class SenderWindow(Slot):
 
