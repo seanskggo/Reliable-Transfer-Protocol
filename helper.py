@@ -61,15 +61,15 @@ class TCP:
         '''Get the time since start of program'''
         return round((time.time() - self.epoch) * 1000, 3)
 
-    def encode(self,seq, ack, data, packet_type) -> bytes:
+    def encode(self, seq, ack, data, packet_type) -> bytes:
         '''Jsonify and encode packet'''
         return json.dumps({ "seq": seq, "ack": ack, "data": data, "p_type": packet_type }).encode()
 
-    def decode(self,packet) -> set:
+    def decode(self, packet) -> set:
         '''Decode and extract data from jsonified packet'''
         return json.loads(packet.decode()).values()
 
-    def add_log(self,action, seq, ack, data, packet_type) -> None:
+    def add_log(self, action, seq, ack, data, packet_type) -> None:
         '''Log packet information'''
         self.log.append([action, self.get_time(), packet_type, seq, ack, len(data)])
 
