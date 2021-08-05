@@ -70,6 +70,7 @@ def poll_send():
         if sender.PL_module(): sender.send(packet, Packet.DATA)
         else: sender.drop(packet, Packet.DATA)
         packet = file.read(MSS)
+
 def poll_receive():
     r, w, e = select.select([client], [], [], timeout/1000)
     if r: sender.receive()
