@@ -7,6 +7,16 @@
 ##################################################################
 
 ##################################################################
+# COMMENT SECTION - GET RID OF LATER
+#
+# Problem 1: Currently, the UDP buffer size is 2048 -> make it 
+#            dynamic
+# Problem 2: Revisit __handle_window logic!!!
+# Problem 3: The while loop after the packet sending is flawed
+#            -> what happens if the last packets were dropped?
+##################################################################
+
+##################################################################
 # Imports
 ##################################################################
 
@@ -72,7 +82,6 @@ with open(filename, "r") as file:
             while not sender.is_full() and packet:
                 if sender.PL_module(): sender.send(packet, Packet.DATA)
                 else: sender.drop(packet, Packet.DATA)
-                sender.window.printWindow(True)
                 packet = file.read(MSS)
                 # if sender.PL_module(): sender.send(packet, Packet.DATA)
                 # else: sender.drop(packet, Packet.DATA)
@@ -80,6 +89,7 @@ with open(filename, "r") as file:
         if r: sender.receive()
         if not (r or w or e): 
             for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
+    while not sender.is_empty(): sender.receive()
     # Initiate teardown -> no connection or teardown packets will be dropped
     sender.send(Data.NONE, Packet.FIN, handshake=True)
     sender.receive(handshake=True)

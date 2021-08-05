@@ -9,21 +9,6 @@
 ##################################################################
 
 ##################################################################
-# COMMENT SECTION - GET RID OF LATER
-#
-# Problem 1: When a window acks and frees a space, no new segment
-#            is sent immediately e.g. [1018, 1082, 1122, None] 
-#            should be [1018, 1082, 1122, "new segment number"]
-# Problem 2: When there are two timeouts per window, the timeout
-#            is twice as long: e.g. two timeouts of 600ms:
-#            rcv   3.531        A      155    0      634   
-#            snd   1205.078     D      634    64     155  
-# Problem 3: Currently, the UDP buffer size is 2048 -> make it 
-#            dynamic
-# Problem 4: Revisit __handle_window logic!!!
-##################################################################
-
-##################################################################
 # Imports
 ##################################################################
 
