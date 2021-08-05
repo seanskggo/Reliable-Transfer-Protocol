@@ -41,6 +41,9 @@ class Data:
     NONE = ""
     BUFFERED = "bfd"
 
+# Maximum receiver segment size of 65Kbytes with surplus
+MAX_SEG_SIZE = 66000
+
 ##################################################################
 # Functions
 ##################################################################
@@ -109,7 +112,7 @@ class Sender(TCP):
 
     def receive(self, handshake=False) -> None:
         '''Log data with current sequence and ack number. Drops the packet'''
-        msg, _ = self.client.recvfrom(2048)
+        msg, _ = self.client.recvfrom(MAX_SEG_SIZE)
         seq, ack, data, packet_type = self.decode(msg)
         self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         self.__update_ack(seq, data, packet_type)
@@ -172,7 +175,7 @@ class Receiver(TCP):
 
     def receive(self, handshake=False) -> str:
         '''Receive and parse segment. Return or buffer data'''
-        msg, self.addr = self.server.recvfrom(2048)
+        msg, self.addr = self.server.recvfrom(MAX_SEG_SIZE)
         seq, ack, data, packet_type = self.decode(msg)
         if handshake: self.add_log(Action.RECEIVE, seq, ack, data, packet_type)
         else: data = self.__handle_window(seq, ack, data, packet_type)

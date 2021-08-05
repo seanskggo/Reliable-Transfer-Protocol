@@ -86,3 +86,8 @@ sender.printWindow()
 # # window.ack(4)
 
 # window.printWindow()
+
+import json
+
+a = json.dumps({ "seq": 123123, "ack": 123123, "data": 0, "p_type": "FA" }).encode()
+print(len(a))
