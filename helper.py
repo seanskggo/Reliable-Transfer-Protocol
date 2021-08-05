@@ -161,6 +161,12 @@ class Sender(TCP):
         if packet_type in self.header_bytes(): self.seq += 1
         else: self.seq += len(data)
 
+    def is_full(self) -> bool:
+        return self.window.is_full()
+
+    def is_empty(self) -> bool:
+        return self.window.is_empty()
+
 class Receiver(TCP):
 
     def __init__(self, server, seq, ack) -> None:
@@ -255,6 +261,12 @@ class SenderWindow(Slot):
         '''Return a list of packets in window that have not been acknowledged'''
         return [(lambda a, b, c: (a - len(c), b, c))(*i) 
             for i in self.window if i not in (Slot.EMPTY, Slot.ACKED)]
+
+    def is_full(self) -> bool:
+        return all([False if i == Slot.EMPTY else True for i in self.window])
+
+    def is_empty(self) -> bool:
+        return all([True if i == Slot.EMPTY else False for i in self.window])
 
     ##################################################################
     # REMOVE LATER!!!
