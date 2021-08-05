@@ -31,7 +31,7 @@ if (len(sys.argv) != 3): exit(RECEIVER_ERROR)
 try: port, filename = int(sys.argv[1]), sys.argv[2]
 except: exit(RECEIVER_ERROR)
 
-# Set initial sequence number and ack
+# Set initial sequence and acknowledgement number
 seq, ack = 154, 0
 
 # Create UDP socket server

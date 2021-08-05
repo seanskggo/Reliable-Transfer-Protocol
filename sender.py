@@ -7,14 +7,6 @@
 ##################################################################
 
 ##################################################################
-# COMMENT SECTION - GET RID OF LATER
-#
-# Problem 1: Currently, the UDP buffer size is 2048 -> make it 
-#            dynamic
-# Problem 2: Revisit __handle_window logic!!!
-##################################################################
-
-##################################################################
 # Imports
 ##################################################################
 
@@ -52,7 +44,7 @@ except: exit(SENDER_ERROR)
 if not 0 < pdrop < 1: exit(PDROP_ERROR)
 if MSS <= 0: exit(MSS_ERROR)
 
-# Set initial sequence number and ack
+# Set initial sequence and acknowledgement number
 seq, ack = 121, 0
 
 # Calculate window size
@@ -107,67 +99,3 @@ with open("Sender_log.txt", "w") as logfile:
     logfile.write(f"No. Packets Dropped:             {drp_pkt}\n")
     logfile.write(f"No. Retransmitted Segments:      {re_seg}\n")
     logfile.write(f"No. Duplicate Acknowledgements:  {dup_ack}\n\n")
-
-# def send_thread():
-#     packet = file.read(MSS)
-#     while packet:
-#         print(packet, end='')
-#         sender.send(packet, Packet.DATA)
-#         packet = file.read(MSS)
-
-# def receive_thread():
-#     while not sender.is_empty():
-#         sender.receive()
-
-    # sd = threading.Thread(target=send_thread)
-    # rcv = threading.Thread(target=receive_thread)
-    # rcv.start()
-    # sd.start()
-    # sd.join()
-    # rcv.join()
-
-        # print("-----------------")
-        # for ln in range(window_length):
-        #     if sender.PL_module(): sender.send(packet, Packet.DATA)
-        #     else: sender.drop(packet, Packet.DATA)
-        #     packet = file.read(MSS)
-        #     if not packet: break
-        #     sender.window.printWindow(True)
-        # fine = True
-        # for _ in range(ln + 1):
-        #     try: sender.receive()
-        #     except: fine = False
-        # if not fine:
-        #     print("packets dropped")
-        #     print( sender.window.data_to_resend())
-        #     for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
-        #     [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
-        # print("-----------------")
-
-##################################################################
-# Past Ideas
-##################################################################
-
-# def send_packet(packet):
-#     if sender.PL_module(): sender.send(packet, Packet.DATA)
-#     else: sender.drop(packet, Packet.DATA)
-#     try: sender.receive()
-#     except: send_packet(packet)
-
-# print("-----------------")
-# for ln in range(window_length):
-#     if sender.PL_module(): sender.send(packet, Packet.DATA)
-#     else: sender.drop(packet, Packet.DATA)
-#     packet = file.read(MSS)
-#     if not packet: break
-#     sender.window.printWindow(True)
-# fine = True
-# for _ in range(ln + 1):
-#     try: sender.receive()
-#     except: fine = False
-# if not fine:
-#     print("packets dropped")
-#     print( sender.window.data_to_resend())
-#     for i in sender.window.data_to_resend(): sender.resend(*i, Packet.DATA)
-#     [sender.receive() for _ in range(len(sender.window.data_to_resend()))]
-# print("-----------------")

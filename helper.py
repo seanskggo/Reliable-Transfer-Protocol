@@ -150,9 +150,11 @@ class Sender(TCP):
         else: self.seq += len(data)
 
     def is_full(self) -> bool:
+        '''Check if current window is full'''
         return self.window.is_full()
 
     def is_empty(self) -> bool:
+        '''Check if current window is empty'''
         return self.window.is_empty()
 
 class Receiver(TCP):
@@ -251,17 +253,12 @@ class SenderWindow(Slot):
             for i in self.window if i not in (Slot.EMPTY, Slot.ACKED)]
 
     def is_full(self) -> bool:
+        '''Check if current window is full'''
         return all([False if i == Slot.EMPTY else True for i in self.window])
 
     def is_empty(self) -> bool:
+        '''Check if current window is empty'''
         return all([True if i == Slot.EMPTY else False for i in self.window])
-
-    ##################################################################
-    # REMOVE LATER!!!
-    ##################################################################
-    def printWindow(self, ack_only=False) -> None:
-        if ack_only: print([i[0] if i else None for i in self.window])
-        else: print([i if i else None for i in self.window])
 
 ##################################################################
 # Receiver Window Class
